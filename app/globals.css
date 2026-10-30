@@ -1,26 +1,91 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0a0a0b;
+  --card: #111113;
+  --card-hover: #161619;
+  --border: #1f1f23;
+  --border-subtle: #19191d;
+  --text: #ededed;
+  --text-dim: #a1a1aa;
+  --muted: #71717a;
+  --accent: #22d3ee;
+  --accent-glow: rgba(34, 211, 238, 0.15);
+  --win: #22c55e;
+  --win-bg: rgba(34, 197, 94, 0.12);
+  --loss: #ef4444;
+  --loss-bg: rgba(239, 68, 68, 0.12);
+  --pending: #f59e0b;
+  --pending-bg: rgba(245, 158, 11, 0.12);
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.light {
+  --bg: #f4f4f5;
+  --card: #ffffff;
+  --card-hover: #fafafa;
+  --border: #e4e4e7;
+  --border-subtle: #f0f0f2;
+  --text: #111111;
+  --text-dim: #52525b;
+  --muted: #71717a;
+  --accent: #0891b2;
+  --accent-glow: rgba(8, 145, 178, 0.12);
+  --win: #16a34a;
+  --win-bg: rgba(22, 163, 74, 0.12);
+  --loss: #dc2626;
+  --loss-bg: rgba(220, 38, 38, 0.12);
+  --pending: #d97706;
+  --pending-bg: rgba(217, 119, 6, 0.12);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  margin: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Number display rules */
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Bento card styling */
+.bento-card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  position: relative;
+  transition: border-color 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
+}
+
+.bento-card:hover {
+  border-color: rgba(34, 211, 238, 0.35);
+  transform: translateY(-2px);
+}
+
+.inner-radius {
+  border-radius: 10px;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }

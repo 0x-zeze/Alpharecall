@@ -13,10 +13,13 @@
     "@mysten-incubation/memwal": "^0.1.12",
     "@tatumio/tatum": "^4.2.60",
     "clsx": "^2.1.1",
+    "framer-motion": "^14.8.0",
+    "geist": "^1.8.2",
     "lucide-react": "^1.65.0",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "recharts": "^3.10.1",
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
