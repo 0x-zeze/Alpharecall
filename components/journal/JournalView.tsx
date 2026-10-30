@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Search,
-  Filter,
   Plus,
   ChevronDown,
   ChevronUp,
@@ -12,7 +11,6 @@ import {
   XCircle,
   Clock,
   ExternalLink,
-  Tag,
   Star,
   RefreshCw,
 } from "lucide-react";

@@ -11,8 +11,7 @@ import {
   Cell,
 } from "recharts";
 import { BentoCard, BentoHeader } from "../ui/BentoCard";
-import { AnimatedNumber } from "../ui/AnimatedNumber";
-import { BarChart3, TrendingUp, PieChart, Target } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 
 export function AnalyticsView() {
   const leagueData = [

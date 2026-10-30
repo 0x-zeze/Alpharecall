@@ -10,8 +10,6 @@ import {
   Sun,
   Moon,
   Database,
-  Activity,
-  Sparkles,
   RefreshCw,
 } from "lucide-react";
 import { useTheme } from "../theme/ThemeProvider";
@@ -38,7 +36,6 @@ export function Sidebar({
   seeding,
   walrusMemoriesCount,
   isMainnetConnected = false,
-  walrusMode = "demo",
 }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
 

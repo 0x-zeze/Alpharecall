@@ -14,7 +14,7 @@ import {
   MIN_CREDIBILITY_WEIGHT,
   MAX_CREDIBILITY_WEIGHT,
 } from "../lib/credibility";
-import { PredictionRecord } from "../lib/types";
+import { PredictionRecord, PredictionStatus } from "../lib/types";
 
 describe("lib/memory-codec - Encode & Decode Validation", () => {
   const samplePayload: MemoryPayloadV1 = {
@@ -86,7 +86,7 @@ describe("lib/memory-codec - Encode & Decode Validation", () => {
     expect(decodeMemory(`${MEMORY_PREFIX}{"predictionId":"1","analyst":"@test"}`)).toBeNull();
 
     // Invalid outcome
-    const invalidOutcome = { ...samplePayload, outcome: "INVALID_STATUS" as any };
+    const invalidOutcome = { ...samplePayload, outcome: "INVALID_STATUS" as unknown as PredictionStatus };
     expect(decodeMemory(`${MEMORY_PREFIX}${JSON.stringify(invalidOutcome)}`)).toBeNull();
   });
 

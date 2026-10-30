@@ -45,7 +45,7 @@ export default function AlphaRecallApp() {
         setWalrusMode(memData.mode || "demo");
 
         if (memData.data?.length > 0) {
-          const liveRecords: PredictionRecord[] = memData.data.map((m: any, idx: number) => ({
+          const liveRecords: PredictionRecord[] = memData.data.map((m: Partial<PredictionRecord>, idx: number) => ({
             id: m.id || `live-${idx}`,
             category: m.category || "audit",
             sportType: m.sportType || (m.target?.toLowerCase().includes("sui") || m.target?.toLowerCase().includes("btc") ? "crypto" : "soccer"),
@@ -84,9 +84,18 @@ export default function AlphaRecallApp() {
   };
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    let active = true;
+    const init = async () => {
+      if (active) await fetchData();
+    };
+    init();
+    const interval = setInterval(() => {
+      if (active) fetchData();
+    }, 30000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const handleSeedMemories = async () => {

@@ -8,10 +8,7 @@ import {
   XCircle,
   TrendingUp,
   ShieldCheck,
-  Scale,
   Inbox,
-  ArrowRight,
-  Sparkles,
 } from "lucide-react";
 import { BentoCard, BentoHeader } from "../ui/BentoCard";
 import { AnimatedNumber } from "../ui/AnimatedNumber";
@@ -100,7 +97,7 @@ export function CredibilityView({
           <Inbox className="w-10 h-10 mx-auto text-[var(--muted)]/40" />
           <h3 className="font-bold text-sm text-[var(--text)]">No Forecaster Memory Records Found</h3>
           <p className="max-w-md mx-auto text-[var(--muted)]">
-            Walrus Memory is currently clean. Click "Seed 10 Memories" in the sidebar or record new predictions to calculate adaptive credibility weights.
+            Walrus Memory is currently clean. Click &quot;Seed 10 Memories&quot; in the sidebar or record new predictions to calculate adaptive credibility weights.
           </p>
         </div>
       ) : (

@@ -1,4 +1,4 @@
-import type { SuiNodeStatus, PredictionResolutionResult } from "./types";
+import type { SuiNodeStatus } from "./types";
 
 /**
  * Fetch live Sui Network metrics via Tatum Sui Gateway or public RPC.

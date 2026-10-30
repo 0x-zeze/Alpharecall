@@ -11,10 +11,22 @@ interface BestWorstPickCardProps {
 }
 
 export function BestWorstPickCard({ bestPick, worstPick }: BestWorstPickCardProps) {
+  const bestTitle = bestPick?.title || "SUI/USDT Breakout > $2.00";
+  const bestPnl = bestPick?.pnl ?? 560;
+  const bestAnalyst = bestPick?.analyst || "@SuiEcosystemAlpha";
+  const bestContent = bestPick?.content || "Logged prior to onchain TVL passing $1B. Realized peak at $2.365.";
+  const bestDelta = bestPick?.credibilityDelta ?? 8;
+
+  const worstTitle = worstPick?.title || "West Ham 2 - 1 Man United";
+  const worstPnl = worstPick?.pnl ?? -300;
+  const worstAnalyst = worstPick?.analyst || "@EPLForecasterBeta";
+  const worstContent = worstPick?.content || "Bowen 92&apos; penalty sealed loss over Casemiro&apos;s 81st-minute goal.";
+  const worstDelta = worstPick?.credibilityDelta ?? -6;
+
   return (
     <BentoCard colSpan="col-span-12 lg:col-span-6" delay={0.35} className="flex flex-col justify-between">
       <BentoHeader
-        title="Best & Worst Pick of the Month"
+        title="Best &amp; Worst Pick of the Month"
         subtitle="Outlier variance audits stored in Walrus Memory"
       />
 
@@ -26,19 +38,19 @@ export function BestWorstPickCard({ bestPick, worstPick }: BestWorstPickCardProp
               <TrendingUp className="w-3.5 h-3.5" />
               Highest Gain
             </span>
-            <span className="font-bold text-[var(--win)]">+$560 PnL</span>
+            <span className="font-bold text-[var(--win)]">+{bestPnl >= 0 ? `$${bestPnl}` : `-$${Math.abs(bestPnl)}`} PnL</span>
           </div>
 
           <div>
-            <h4 className="text-xs font-bold text-[var(--text)]">SUI/USDT Breakout &gt; $2.00</h4>
+            <h4 className="text-xs font-bold text-[var(--text)]">{bestTitle}</h4>
             <p className="text-[11px] text-[var(--muted)] line-clamp-2 mt-0.5">
-              Logged 48h prior to onchain TVL passing $1B. Realized peak at $2.365.
+              {bestContent}
             </p>
           </div>
 
           <div className="text-[10px] font-mono-num text-[var(--muted)] pt-1 flex justify-between border-t border-[var(--win)]/15">
-            <span>By @SuiEcosystemAlpha</span>
-            <span className="text-[var(--win)] font-semibold">+8 Credibility</span>
+            <span>By {bestAnalyst}</span>
+            <span className="text-[var(--win)] font-semibold">+{bestDelta} Credibility</span>
           </div>
         </div>
 
@@ -49,26 +61,26 @@ export function BestWorstPickCard({ bestPick, worstPick }: BestWorstPickCardProp
               <TrendingDown className="w-3.5 h-3.5" />
               Maximum Drawdown
             </span>
-            <span className="font-bold text-[var(--loss)]">-$300 PnL</span>
+            <span className="font-bold text-[var(--loss)]">-${Math.abs(worstPnl)} PnL</span>
           </div>
 
           <div>
-            <h4 className="text-xs font-bold text-[var(--text)]">West Ham 2 - 1 Man United</h4>
+            <h4 className="text-xs font-bold text-[var(--text)]">{worstTitle}</h4>
             <p className="text-[11px] text-[var(--muted)] line-clamp-2 mt-0.5">
-              Bowen 92' penalty sealed loss over Casemiro's 81st-minute goal.
+              {worstContent}
             </p>
           </div>
 
           <div className="text-[10px] font-mono-num text-[var(--muted)] pt-1 flex justify-between border-t border-[var(--loss)]/15">
-            <span>By @EPLForecasterBeta</span>
-            <span className="text-[var(--loss)] font-semibold">-6 Credibility</span>
+            <span>By {worstAnalyst}</span>
+            <span className="text-[var(--loss)] font-semibold">{worstDelta} Credibility</span>
           </div>
         </div>
       </div>
 
       <div className="text-[11px] text-[var(--muted)] pt-3 border-t border-[var(--border)] font-mono-num flex justify-between">
         <span>Asymmetry Index: 1.93x</span>
-        <span>Memory Audit: Permanent</span>
+        <span>Risk Adjusted Gain: +31.8%</span>
       </div>
     </BentoCard>
   );

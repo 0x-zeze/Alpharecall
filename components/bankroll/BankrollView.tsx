@@ -11,10 +11,10 @@ import {
 } from "recharts";
 import { BentoCard, BentoHeader } from "../ui/BentoCard";
 import { AnimatedNumber } from "../ui/AnimatedNumber";
-import { Wallet, Calculator, ArrowUpRight, ArrowDownLeft, Shield } from "lucide-react";
+import { Wallet, Calculator } from "lucide-react";
 
 export function BankrollView() {
-  const [bankrollTotal, setBankrollTotal] = useState<number>(12450);
+  const [bankrollTotal] = useState<number>(12450);
   const [stakeMethod, setStakeMethod] = useState<"flat" | "kelly">("kelly");
   const [winProb, setWinProb] = useState<number>(65); // 65%
   const [decimalOdds, setDecimalOdds] = useState<number>(1.91); // -110 American

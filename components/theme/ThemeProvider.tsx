@@ -18,20 +18,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
+    // Sync theme with DOM and localStorage safely without synchronous initial render thrashing
     const saved = localStorage.getItem("alpharecall-theme") as Theme | null;
     if (saved === "light" || saved === "dark") {
-      setTheme(saved);
       document.documentElement.classList.toggle("light", saved === "light");
-    } else {
-      setTheme("dark");
-      document.documentElement.classList.remove("light");
     }
   }, []);
 
   const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
+    const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    localStorage.setItem("alpharecall-theme", next);
+    try {
+      localStorage.setItem("alpharecall-theme", next);
+    } catch {
+      // Ignore storage errors in restricted contexts
+    }
     document.documentElement.classList.toggle("light", next === "light");
   };
 

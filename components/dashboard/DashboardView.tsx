@@ -13,13 +13,12 @@ import { PredictionRecord, SuiNodeStatus } from "@/lib/types";
 
 interface DashboardViewProps {
   predictions: PredictionRecord[];
-  suiMetrics: SuiNodeStatus | null;
+  suiMetrics?: SuiNodeStatus | null;
   onNavigateJournal: () => void;
 }
 
 export function DashboardView({
   predictions,
-  suiMetrics,
   onNavigateJournal,
 }: DashboardViewProps) {
   // Aggregate stats from real records
