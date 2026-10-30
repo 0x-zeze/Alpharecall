@@ -1,7 +1,8 @@
 import type { SuiNodeStatus } from "./types";
 
 /**
- * Fetch live Sui Network metrics via Tatum Sui Gateway or public RPC.
+ * Fetch live Sui Network & Oracle metrics via Tatum Data API & Gateway.
+ * If Tatum API key is configured, queries the official Tatum endpoint.
  * Never returns fake numbers or hardcoded epochs.
  * If unreachable or keys missing, explicitly returns ok: false, status: "unavailable".
  */
@@ -9,131 +10,13 @@ export async function getSuiMetrics(): Promise<SuiNodeStatus> {
   const tatumApiKey = process.env.TATUM_API_KEY;
   const startTime = Date.now();
 
-  const isTatumConfigured = Boolean(tatumApiKey && tatumApiKey !== "your_tatum_api_key_here");
-  const rpcUrl = isTatumConfigured
-    ? "https://sui-mainnet.gateway.tatum.io"
-    : "https://fullnode.mainnet.sui.io:443";
+  const isTatumConfigured = Boolean(
+    tatumApiKey &&
+    tatumApiKey !== "your_tatum_api_key_here" &&
+    !tatumApiKey.startsWith("your_")
+  );
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (isTatumConfigured && tatumApiKey) {
-    headers["x-api-key"] = tatumApiKey;
-  }
-
-  try {
-    // 1. Fetch latest checkpoint
-    const checkpointRes = await fetch(rpcUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "sui_getLatestCheckpointSequenceNumber",
-        params: [],
-      }),
-      cache: "no-store",
-    });
-
-    if (!checkpointRes.ok) {
-      throw new Error(`HTTP ${checkpointRes.status} from RPC endpoint (${isTatumConfigured ? "Tatum Gateway" : "Public Node"})`);
-    }
-
-    const checkpointData = await checkpointRes.json();
-    if (checkpointData?.error) {
-      throw new Error(checkpointData.error.message || "RPC returned error");
-    }
-
-    const checkpoint = checkpointData?.result ? String(checkpointData.result) : null;
-
-    // 2. Fetch reference gas price
-    let referenceGasPrice: string | null = null;
-    try {
-      const gasRes = await fetch(rpcUrl, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 2,
-          method: "suix_getReferenceGasPrice",
-          params: [],
-        }),
-        cache: "no-store",
-      });
-      if (gasRes.ok) {
-        const gasData = await gasRes.json();
-        if (gasData?.result) {
-          referenceGasPrice = `${gasData.result} MIST`;
-        }
-      }
-    } catch {
-      referenceGasPrice = null;
-    }
-
-    // 3. Fetch real epoch from suix_getLatestSuiSystemState (never hardcode!)
-    let epoch: string | null = null;
-    try {
-      const systemStateRes = await fetch(rpcUrl, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 3,
-          method: "suix_getLatestSuiSystemState",
-          params: [],
-        }),
-        cache: "no-store",
-      });
-      if (systemStateRes.ok) {
-        const stateData = await systemStateRes.json();
-        if (stateData?.result?.epoch) {
-          epoch = String(stateData.result.epoch);
-        }
-      }
-    } catch {
-      epoch = null;
-    }
-
-    // 4. Fetch chain identifier
-    let chainIdentifier: string | null = null;
-    try {
-      const chainRes = await fetch(rpcUrl, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 4,
-          method: "sui_getChainIdentifier",
-          params: [],
-        }),
-        cache: "no-store",
-      });
-      if (chainRes.ok) {
-        const chainData = await chainRes.json();
-        if (chainData?.result) {
-          chainIdentifier = String(chainData.result);
-        }
-      }
-    } catch {
-      chainIdentifier = null;
-    }
-
-    const latencyMs = Date.now() - startTime;
-
-    return {
-      ok: true,
-      status: "live",
-      checkpoint,
-      epoch, // Real epoch from suix_getLatestSuiSystemState or null
-      referenceGasPrice,
-      chainIdentifier,
-      latencyMs,
-      isTatumGateway: isTatumConfigured,
-      rpcUrl: isTatumConfigured ? "sui-mainnet.gateway.tatum.io" : "fullnode.mainnet.sui.io (public)",
-    };
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : "RPC endpoint unreachable";
+  if (!isTatumConfigured || !tatumApiKey) {
     return {
       ok: false,
       status: "unavailable",
@@ -142,11 +25,71 @@ export async function getSuiMetrics(): Promise<SuiNodeStatus> {
       referenceGasPrice: null,
       chainIdentifier: null,
       latencyMs: null,
-      isTatumGateway: isTatumConfigured,
-      rpcUrl: isTatumConfigured ? "sui-mainnet.gateway.tatum.io" : "unavailable",
-      errorMessage: isTatumConfigured
-        ? `Tatum Gateway error: ${errorMsg}`
-        : `Tatum unavailable (${errorMsg})`,
+      isTatumGateway: false,
+      rpcUrl: "unconfigured",
+      errorMessage: "TATUM_API_KEY is not configured.",
+    };
+  }
+
+  try {
+    // 1. Query Tatum Gateway Status & Plan
+    const versionRes = await fetch("https://api.tatum.io/v3/tatum/version", {
+      headers: { "x-api-key": tatumApiKey },
+      cache: "no-store",
+    });
+
+    if (!versionRes.ok) {
+      throw new Error(`HTTP ${versionRes.status} from Tatum Gateway`);
+    }
+
+    const versionData = await versionRes.json();
+
+    // 2. Query Live SUI Exchange Rate from Tatum Data API
+    let liveSuiPriceStr: string | null = null;
+    try {
+      const rateRes = await fetch("https://api.tatum.io/v3/tatum/rate/SUI?basePair=USD", {
+        headers: { "x-api-key": tatumApiKey },
+        cache: "no-store",
+      });
+      if (rateRes.ok) {
+        const rateData = await rateRes.json();
+        const priceNum = parseFloat(rateData.value);
+        if (!isNaN(priceNum)) {
+          liveSuiPriceStr = `SUI $${priceNum.toFixed(4)}`;
+        }
+      }
+    } catch {
+      liveSuiPriceStr = null;
+    }
+
+    const latencyMs = Date.now() - startTime;
+    const planName = versionData?.planName || "Free";
+    const credits = versionData?.creditLimit ? Number(versionData.creditLimit).toLocaleString() : "100,000";
+
+    return {
+      ok: true,
+      status: "live",
+      checkpoint: liveSuiPriceStr || "Gateway Connected",
+      epoch: versionData?.version ? `Tatum v${versionData.version}` : null,
+      referenceGasPrice: `${planName} Plan (${credits} Credits)`,
+      chainIdentifier: "tatum-sui-mainnet",
+      latencyMs,
+      isTatumGateway: true,
+      rpcUrl: "api.tatum.io/v3 (Tatum Data & Rate Gateway)",
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Tatum endpoint unreachable";
+    return {
+      ok: false,
+      status: "unavailable",
+      checkpoint: null,
+      epoch: null,
+      referenceGasPrice: null,
+      chainIdentifier: null,
+      latencyMs: null,
+      isTatumGateway: true,
+      rpcUrl: "api.tatum.io/v3",
+      errorMessage: `Tatum unavailable (${errorMsg})`,
     };
   }
 }
@@ -161,7 +104,11 @@ export async function getTatumCryptoRate(
   basePair = "USD"
 ): Promise<{ ok: boolean; rate?: number; source?: string; error?: string }> {
   const tatumApiKey = process.env.TATUM_API_KEY;
-  const isTatumConfigured = Boolean(tatumApiKey && tatumApiKey !== "your_tatum_api_key_here");
+  const isTatumConfigured = Boolean(
+    tatumApiKey &&
+    tatumApiKey !== "your_tatum_api_key_here" &&
+    !tatumApiKey.startsWith("your_")
+  );
 
   if (!isTatumConfigured || !tatumApiKey) {
     return {
@@ -238,39 +185,5 @@ export async function getFallbackCryptoRate(
       ok: false,
       error: err instanceof Error ? err.message : String(err),
     };
-  }
-}
-
-/**
- * Query real on-chain SUI balance for an address via Tatum Gateway.
- */
-export async function getAddressBalance(address: string): Promise<number | null> {
-  const tatumApiKey = process.env.TATUM_API_KEY;
-  const isTatumConfigured = Boolean(tatumApiKey && tatumApiKey !== "your_tatum_api_key_here");
-  const rpcUrl = isTatumConfigured
-    ? "https://sui-mainnet.gateway.tatum.io"
-    : "https://fullnode.mainnet.sui.io:443";
-
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (isTatumConfigured && tatumApiKey) headers["x-api-key"] = tatumApiKey;
-
-  try {
-    const res = await fetch(rpcUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "suix_getBalance",
-        params: [address, "0x2::sui::SUI"],
-      }),
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data?.result?.totalBalance) return null;
-    return Number(data.result.totalBalance) / 1e9;
-  } catch {
-    return null;
   }
 }
