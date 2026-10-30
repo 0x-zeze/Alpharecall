@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PredictionRecord, PredictionCategory, PredictionStatus } from "@/lib/types";
 import { AddPredictionSlideOver } from "./AddPredictionSlideOver";
+import { getWalrusBlobExplorerUrl } from "@/lib/explorer";
 
 interface JournalViewProps {
   predictions: PredictionRecord[];
@@ -275,13 +276,50 @@ export function JournalView({ predictions, onAddPrediction }: JournalViewProps) 
                                     </span>
                                   </div>
 
-                                  {pred.mainnetCommitHash && (
-                                    <div className="pt-1.5 border-t border-[var(--border)]">
-                                      <span className="text-[10px] text-[var(--muted)] block mb-0.5">
-                                        Walrus Mainnet Blob ID
+                                  {/* Honest On-Chain State / Walrus Verification Link */}
+                                  {pred.writeStatus === "confirmed" && pred.blobId ? (
+                                    <div className="pt-2 border-t border-[var(--border)]">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className="text-[10px] text-[var(--muted)] uppercase font-semibold">
+                                          Walrus Mainnet Blob
+                                        </span>
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[var(--win-bg)] text-[var(--win)] border border-[var(--win)]/30">
+                                          Confirmed
+                                        </span>
+                                      </div>
+                                      <a
+                                        href={getWalrusBlobExplorerUrl(pred.blobId)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 font-mono-num text-[11px] text-[var(--accent)] hover:underline break-all"
+                                      >
+                                        <span>{pred.blobId}</span>
+                                        <ExternalLink className="w-3 h-3 shrink-0" />
+                                      </a>
+                                    </div>
+                                  ) : pred.writeStatus === "failed" ? (
+                                    <div className="pt-2 border-t border-[var(--border)]">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className="text-[10px] text-[var(--loss)] uppercase font-semibold">
+                                          Walrus Write Failed
+                                        </span>
+                                      </div>
+                                      <p className="text-[10px] text-[var(--loss)] font-mono-num break-all">
+                                        {pred.writeError || "Relayer write rejected"}
+                                      </p>
+                                    </div>
+                                  ) : pred.writeStatus === "pending" ? (
+                                    <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
+                                      <span className="text-[10px] text-[var(--muted)] uppercase">On-Chain State</span>
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/30">
+                                        Writing to Walrus...
                                       </span>
-                                      <span className="font-mono-num text-[11px] text-[var(--accent)] break-all block">
-                                        {pred.mainnetCommitHash}
+                                    </div>
+                                  ) : (
+                                    <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
+                                      <span className="text-[10px] text-[var(--muted)] uppercase">On-Chain State</span>
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] text-[var(--muted)] bg-[var(--border-subtle)] border border-[var(--border)]">
+                                        Local Demo (Not on-chain)
                                       </span>
                                     </div>
                                   )}

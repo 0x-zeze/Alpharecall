@@ -1,13 +1,14 @@
 import { MemWal } from "@mysten-incubation/memwal";
 import { PredictionRecord } from "./types";
-import { CANONICAL_SEEDS } from "./seed-data";
+import { DEMO_PREDICTIONS } from "./demo-data";
 
 export type MemoryRecord = PredictionRecord;
 
-// In-memory ledger initialized with authentic canonical records (NO fake hashes)
-const memoryLedger: MemoryRecord[] = [...CANONICAL_SEEDS];
+// Transient in-memory cache for demo/offline fallback.
+// In production with Walrus keys configured, the source of truth is Walrus via recall().
+const localDemoCache: MemoryRecord[] = [...DEMO_PREDICTIONS];
 
-function getMemWalClient(): MemWal | null {
+export function getMemWalClient(): MemWal | null {
   const key = process.env.MEMWAL_PRIVATE_KEY;
   const accountId = process.env.MEMWAL_ACCOUNT_ID;
   const serverUrl = process.env.MEMWAL_SERVER_URL || "https://relayer.memory.walrus.xyz";
@@ -25,20 +26,62 @@ function getMemWalClient(): MemWal | null {
       namespace,
     });
   } catch (err) {
-    console.warn("Failed to initialize MemWal client, operating in local verified mode:", err);
+    console.warn("Failed to initialize MemWal client:", err);
     return null;
   }
 }
 
 /**
- * Retrieve all memories from Walrus Memory on Mainnet.
- * Decodes structured JSON payloads and binds authentic Walrus blob_id.
- * Falls back to canonical verified records if offline or keys not provided.
+ * Checks authentic Walrus Mainnet connectivity.
+ * Returns true ONLY if keys are configured AND the live relayer/recall call succeeds.
+ */
+export async function checkWalrusConnection(): Promise<{
+  isMainnetConnected: boolean;
+  mode: "live" | "demo";
+  error?: string;
+}> {
+  const client = getMemWalClient();
+  if (!client) {
+    return {
+      isMainnetConnected: false,
+      mode: "demo",
+      error: "MEMWAL_PRIVATE_KEY or MEMWAL_ACCOUNT_ID not configured.",
+    };
+  }
+
+  try {
+    // Health probe to verify actual live connection to Walrus Relayer
+    const health = await client.health();
+    if (health?.status === "ok" || health?.write_ready) {
+      return {
+        isMainnetConnected: true,
+        mode: "live",
+      };
+    }
+    return {
+      isMainnetConnected: false,
+      mode: "demo",
+      error: "Walrus relayer write_ready is false.",
+    };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    return {
+      isMainnetConnected: false,
+      mode: "demo",
+      error: `Walrus relayer unreachable: ${errorMsg}`,
+    };
+  }
+}
+
+/**
+ * Retrieve all memories from Walrus Memory on Mainnet via recall().
+ * Reconstructs prediction records from recalled structured JSON.
+ * Falls back to canonical demo data ONLY if Walrus keys are missing or recall fails.
  */
 export async function getAllMemories(): Promise<MemoryRecord[]> {
   const client = getMemWalClient();
   if (!client) {
-    return memoryLedger;
+    return localDemoCache;
   }
 
   try {
@@ -49,7 +92,6 @@ export async function getAllMemories(): Promise<MemoryRecord[]> {
         try {
           parsed = JSON.parse(item.text);
         } catch {
-          // If not raw JSON, check if it contains serialized key-values
           parsed = {
             title: item.text.slice(0, 60),
             content: item.text,
@@ -74,7 +116,9 @@ export async function getAllMemories(): Promise<MemoryRecord[]> {
           confidence: parsed.confidence ?? 4,
           timestamp: parsed.timestamp || (item.created_at ? new Date(item.created_at).getTime() : Date.now()),
           dateStr: parsed.dateStr || (item.created_at ? new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Today"),
-          mainnetCommitHash: item.blob_id, // Real Walrus blob_id from the recall hit
+          blobId: item.blob_id, // Real authentic Walrus blob_id
+          writeStatus: "confirmed",
+          source: "walrus",
           reasoning: parsed.reasoning,
           postMortem: parsed.postMortem,
           tags: parsed.tags,
@@ -83,18 +127,18 @@ export async function getAllMemories(): Promise<MemoryRecord[]> {
 
       return recalled;
     }
-    return memoryLedger;
+    return localDemoCache;
   } catch (error) {
-    console.warn("Falling back to verified local ledger after Walrus recall:", error);
-    return memoryLedger;
+    console.warn("Falling back to local demo data after Walrus recall failure:", error);
+    return localDemoCache;
   }
 }
 
 /**
  * Commit a new prediction or audit record to Walrus Memory.
- * Serializes the full structured payload into Walrus text.
- * Stores the REAL Walrus blob_id returned by waitForRememberJob().
- * Never generates fake random hashes.
+ * - If client is configured: submits remember(), waits for job, and records real blobId + writeStatus: "confirmed".
+ * - If client is missing: writeStatus: "local-demo" without blobId.
+ * - If remember fails: writeStatus: "failed" with explicit writeError. Never silently fakes success.
  */
 export async function saveMemory(record: Partial<MemoryRecord> & {
   title: string;
@@ -126,28 +170,50 @@ export async function saveMemory(record: Partial<MemoryRecord> & {
     reasoning: record.reasoning,
     postMortem: record.postMortem,
     tags: record.tags,
-    mainnetCommitHash: undefined, // Only populated if Walrus returns a verified blob_id
+    blobId: undefined,
+    writeStatus: "pending",
+    source: "demo",
   };
 
   const client = getMemWalClient();
-  if (client) {
-    try {
-      // Serialize full structured object into JSON
-      const memoryPayload = JSON.stringify(newRecord);
-      const accepted = await client.remember(memoryPayload);
-      if (accepted?.job_id) {
-        // Wait for terminal state to extract the authentic Walrus blob_id
-        const rememberResult = await client.waitForRememberJob(accepted.job_id);
-        if (rememberResult?.blob_id) {
-          newRecord.mainnetCommitHash = rememberResult.blob_id;
-        }
-      }
-    } catch (e) {
-      console.warn("Walrus remember operation failed or queued:", e);
-      // Explicitly leave mainnetCommitHash as undefined to reflect local/pending state
-    }
+  if (!client) {
+    newRecord.writeStatus = "local-demo";
+    newRecord.blobId = undefined;
+    localDemoCache.unshift(newRecord);
+    return newRecord;
   }
 
-  memoryLedger.unshift(newRecord);
+  try {
+    const memoryPayload = JSON.stringify({
+      ...newRecord,
+      source: "walrus",
+    });
+
+    const accepted = await client.remember(memoryPayload);
+    if (!accepted?.job_id) {
+      newRecord.writeStatus = "failed";
+      newRecord.writeError = "Walrus relayer did not return an accepted job_id";
+      localDemoCache.unshift(newRecord);
+      return newRecord;
+    }
+
+    // Wait for terminal state to extract the authentic Walrus blob_id
+    const rememberResult = await client.waitForRememberJob(accepted.job_id);
+    if (rememberResult?.blob_id) {
+      newRecord.blobId = rememberResult.blob_id;
+      newRecord.writeStatus = "confirmed";
+      newRecord.source = "walrus";
+    } else {
+      newRecord.writeStatus = "failed";
+      newRecord.writeError = "Remember job finished without valid blob_id";
+    }
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.warn("Walrus remember operation failed:", errorMsg);
+    newRecord.writeStatus = "failed";
+    newRecord.writeError = errorMsg;
+  }
+
+  localDemoCache.unshift(newRecord);
   return newRecord;
 }

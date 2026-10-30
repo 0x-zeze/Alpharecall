@@ -1,4 +1,4 @@
 import { PredictionRecord } from "./types";
-import { CANONICAL_SEEDS } from "./seed-data";
+import { DEMO_PREDICTIONS } from "./demo-data";
 
-export const MOCK_PREDICTIONS: PredictionRecord[] = CANONICAL_SEEDS;
+export const MOCK_PREDICTIONS: PredictionRecord[] = DEMO_PREDICTIONS;

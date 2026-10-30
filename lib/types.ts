@@ -1,5 +1,6 @@
 export type PredictionCategory = "soccer" | "nba" | "crypto" | "sports";
 export type PredictionStatus = "PENDING" | "ACCURATE" | "FAILED";
+export type MemoryWriteStatus = "confirmed" | "pending" | "failed" | "local-demo";
 
 export interface PredictionRecord {
   id: string;
@@ -18,7 +19,10 @@ export interface PredictionRecord {
   confidence: number; // 1 to 5
   timestamp: number;
   dateStr: string;
-  mainnetCommitHash?: string;
+  blobId?: string; // Honest Walrus Mainnet blob ID (only when confirmed)
+  writeStatus: MemoryWriteStatus; // "confirmed" | "pending" | "failed" | "local-demo"
+  writeError?: string;
+  source?: "demo" | "walrus";
   leagueOrAsset?: string;
   reasoning?: string;
   postMortem?: string;
@@ -37,7 +41,7 @@ export interface ForecasterStats {
   winRate: number;
   streak: ("W" | "L")[];
   credibilityScore: number;
-  weightMultiplier: number; // 0.4x to 2.2x
+  weightMultiplier: number; // 0.40x to 2.40x
   avgOdds: string;
   totalPnl: number;
   verifiedWalrusBlobs: number;

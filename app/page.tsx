@@ -18,6 +18,8 @@ export default function AlphaRecallApp() {
   const [predictions, setPredictions] = useState<PredictionRecord[]>(MOCK_PREDICTIONS);
   const [seeding, setSeeding] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isMainnetConnected, setIsMainnetConnected] = useState<boolean>(false);
+  const [walrusMode, setWalrusMode] = useState<"live" | "demo">("demo");
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -38,37 +40,43 @@ export default function AlphaRecallApp() {
       }
 
       const memData = await memRes.json();
-      if (memData?.success && memData.data?.length > 0) {
-        // Merge live walrus records with mock records without duplicates
-        const liveRecords: PredictionRecord[] = memData.data.map((m: any, idx: number) => ({
-          id: m.id || `live-${idx}`,
-          category: m.category || "audit",
-          sportType: m.sportType || (m.target?.toLowerCase().includes("sui") || m.target?.toLowerCase().includes("btc") ? "crypto" : "soccer"),
-          title: m.title || `Walrus Memory #${idx + 1}`,
-          content: m.content || "",
-          analyst: m.analyst || "@WalrusSharps",
-          target: m.target || "Onchain Market",
-          pick: m.pick || "AUDIT",
-          odds: m.odds || "-110",
-          stake: m.stake || 250,
-          pnl: m.pnl || (m.outcome === "ACCURATE" ? 200 : m.outcome === "FAILED" ? -250 : 0),
-          outcome: m.outcome || "ACCURATE",
-          credibilityDelta: m.credibilityDelta ?? 5,
-          confidence: m.confidence || 4,
-          timestamp: m.timestamp || Date.now(),
-          dateStr: new Date(m.timestamp || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          mainnetCommitHash: m.mainnetCommitHash,
-          reasoning: m.content,
-        }));
+      if (memData?.success) {
+        setIsMainnetConnected(Boolean(memData.isMainnetConnected));
+        setWalrusMode(memData.mode || "demo");
 
-        // Merge: unique by target or id
-        const merged = [...liveRecords];
-        MOCK_PREDICTIONS.forEach((mp) => {
-          if (!merged.some((r) => r.id === mp.id || r.target === mp.target)) {
-            merged.push(mp);
-          }
-        });
-        setPredictions(merged);
+        if (memData.data?.length > 0) {
+          const liveRecords: PredictionRecord[] = memData.data.map((m: any, idx: number) => ({
+            id: m.id || `live-${idx}`,
+            category: m.category || "audit",
+            sportType: m.sportType || (m.target?.toLowerCase().includes("sui") || m.target?.toLowerCase().includes("btc") ? "crypto" : "soccer"),
+            title: m.title || `Walrus Memory #${idx + 1}`,
+            content: m.content || "",
+            analyst: m.analyst || "@WalrusSharps",
+            target: m.target || "Onchain Market",
+            pick: m.pick || "AUDIT",
+            odds: m.odds || "-110",
+            stake: m.stake || 250,
+            pnl: m.pnl || (m.outcome === "ACCURATE" ? 200 : m.outcome === "FAILED" ? -250 : 0),
+            outcome: m.outcome || "ACCURATE",
+            credibilityDelta: m.credibilityDelta ?? 5,
+            confidence: m.confidence || 4,
+            timestamp: m.timestamp || Date.now(),
+            dateStr: m.dateStr || new Date(m.timestamp || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            blobId: m.blobId,
+            writeStatus: m.writeStatus || "confirmed",
+            source: m.source || "walrus",
+            reasoning: m.reasoning || m.content,
+          }));
+
+          // Merge without duplicates
+          const merged = [...liveRecords];
+          MOCK_PREDICTIONS.forEach((mp) => {
+            if (!merged.some((r) => r.id === mp.id || r.target === mp.target)) {
+              merged.push(mp);
+            }
+          });
+          setPredictions(merged);
+        }
       }
     } catch (e) {
       console.warn("Using offline fallback data:", e);
@@ -160,6 +168,8 @@ export default function AlphaRecallApp() {
           onSeed={handleSeedMemories}
           seeding={seeding}
           walrusMemoriesCount={predictions.length}
+          isMainnetConnected={isMainnetConnected}
+          walrusMode={walrusMode}
         />
 
         {/* Main Work Area */}

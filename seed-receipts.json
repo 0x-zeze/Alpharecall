@@ -1,0 +1,130 @@
+[
+  {
+    "predictionId": "rec-01",
+    "title": "El Clasico: Real Madrid 0 - 4 FC Barcelona",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.043Z",
+    "textPreview": "Predicted FC Barcelona Draw No Bet (+125). Confirmed: Barcelona routed Real Madrid 4-0 at Santiago B"
+  },
+  {
+    "predictionId": "rec-02",
+    "title": "Premier League: Arsenal 2 - 2 Liverpool Over 2.5 Goals",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.044Z",
+    "textPreview": "Predicted Over 2.5 Total Match Goals (-108). Confirmed: 4 total goals at Emirates Stadium (Bukayo Sa"
+  },
+  {
+    "predictionId": "rec-03",
+    "title": "UEFA Champions League: Real Madrid 5 - 2 Borussia Dortmund",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.045Z",
+    "textPreview": "Predicted Real Madrid 2nd-Half Over 1.5 Team Goals (-120). Confirmed: Trailing 0-2 at halftime, Madr"
+  },
+  {
+    "predictionId": "rec-04",
+    "title": "UEFA Champions League: FC Barcelona 4 - 1 Bayern Munich",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.046Z",
+    "textPreview": "Predicted Barcelona Moneyline (+140). Confirmed: Barcelona ended 6-match losing streak to Bayern wit"
+  },
+  {
+    "predictionId": "rec-05",
+    "title": "NBA: Boston Celtics 119 - 108 Milwaukee Bucks (-9.5 Spread)",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.050Z",
+    "textPreview": "Predicted Boston Celtics -9.5 (-110). Confirmed: Celtics covered with an 11-point victory (119-108) "
+  },
+  {
+    "predictionId": "rec-06",
+    "title": "NBA: Nikola Jokic Over 26.5 Points (Nuggets vs Raptors)",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.051Z",
+    "textPreview": "Predicted Nikola Jokic Over 26.5 Points (-115). Confirmed: Jokic exploded for 40 points, 10 rebounds"
+  },
+  {
+    "predictionId": "rec-07",
+    "title": "Premier League: West Ham 2 - 1 Manchester United",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.052Z",
+    "textPreview": "Predicted Manchester United Moneyline (+115). Failed: Manchester United lost 1-2 at London Stadium. "
+  },
+  {
+    "predictionId": "rec-08",
+    "title": "Sui Ecosystem: SUI Spot Resistance Breakout > $2.00",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.057Z",
+    "textPreview": "Predicted SUI breakout above $2.00 (+140). Confirmed: SUI price broke out from $1.86 to a peak of $2"
+  },
+  {
+    "predictionId": "rec-09",
+    "title": "Bitcoin Macro: BTC Spot Liquidity Sweep to $69,450",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.058Z",
+    "textPreview": "Predicted BTC test of $69,000 range high (+115). Confirmed: Bitcoin tapped $69,519 resistance on Bit"
+  },
+  {
+    "predictionId": "rec-10",
+    "title": "NBA: Los Angeles Lakers 131 - 127 Sacramento Kings",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.059Z",
+    "textPreview": "Predicted Lakers Moneyline (-125). Confirmed: Lakers won 131-127 at Crypto.com Arena behind LeBron J"
+  },
+  {
+    "predictionId": "rec-11",
+    "title": "Ethereum Macro: ETH/BTC Ratio Breakdown Under 0.038",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.060Z",
+    "textPreview": "Predicted ETH/BTC ratio decline under 0.0380 (+110). Confirmed: Ratio broke multi-year support, fall"
+  },
+  {
+    "predictionId": "rec-12",
+    "title": "Premier League: Chelsea 2 - 1 Newcastle United",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.061Z",
+    "textPreview": "Predicted Chelsea Moneyline (-115). Confirmed: Chelsea won 2-1 at Stamford Bridge. Nicolas Jackson o"
+  },
+  {
+    "predictionId": "rec-13",
+    "title": "UEFA Champions League: Real Madrid vs AC Milan",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.062Z",
+    "textPreview": "Predicted Real Madrid Moneyline & Over 2.5 Goals at Santiago Bernabeu."
+  },
+  {
+    "predictionId": "rec-14",
+    "title": "UEFA Champions League: Inter Milan vs Arsenal",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.063Z",
+    "textPreview": "Predicted Under 2.5 Total Match Goals at San Siro."
+  },
+  {
+    "predictionId": "rec-15",
+    "title": "NBA: Boston Celtics vs Golden State Warriors Over 228.5",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.064Z",
+    "textPreview": "Predicted Over 228.5 Total Points at TD Garden."
+  },
+  {
+    "predictionId": "rec-16",
+    "title": "Sui Ecosystem: SUI Spot Re-accumulation Test > $1.85",
+    "blobId": null,
+    "writeStatus": "local-demo",
+    "timestamp": "2026-10-30T13:55:25.065Z",
+    "textPreview": "Predicted SUI bounce confirmation above $1.85 with institutional TVL support."
+  }
+]

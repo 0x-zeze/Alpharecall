@@ -26,6 +26,8 @@ interface SidebarProps {
   onSeed: () => void;
   seeding: boolean;
   walrusMemoriesCount: number;
+  isMainnetConnected?: boolean;
+  walrusMode?: "live" | "demo";
 }
 
 export function Sidebar({
@@ -35,6 +37,8 @@ export function Sidebar({
   onSeed,
   seeding,
   walrusMemoriesCount,
+  isMainnetConnected = false,
+  walrusMode = "demo",
 }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
 
@@ -51,7 +55,7 @@ export function Sidebar({
       {/* Desktop / Tablet Left Slim Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r border-[var(--border)] bg-[var(--bg)] p-5 shrink-0 select-none">
         {/* Brand / Logo */}
-        <div className="flex items-center gap-2.5 pb-6 mb-2 border-b border-[var(--border)]">
+        <div className="flex items-center gap-2.5 pb-4 mb-3 border-b border-[var(--border)]">
           <div className="w-8 h-8 rounded-[10px] bg-[var(--card)] border border-[var(--border)] flex items-center justify-center font-mono-num font-bold text-sm text-[var(--accent)]">
             Ω
           </div>
@@ -60,9 +64,30 @@ export function Sidebar({
               AlphaRecall
             </span>
             <span className="text-[11px] text-[var(--muted)] font-mono-num block">
-              v1.0 • Walrus × Tatum
+              Walrus × Tatum
             </span>
           </div>
+        </div>
+
+        {/* Global Network State Badge (LIVE vs DEMO) */}
+        <div className="mb-4">
+          {isMainnetConnected ? (
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-[8px] bg-[var(--win-bg)] border border-[var(--win)]/30 text-[10px] font-mono-num font-bold text-[var(--win)]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--win)] animate-pulse" />
+                LIVE (Walrus mainnet)
+              </span>
+              <span className="text-[9px] uppercase px-1 rounded bg-[var(--win)]/20 text-[var(--win)]">Active</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-[8px] bg-[var(--border-subtle)] border border-[var(--border)] text-[10px] font-mono-num text-[var(--muted)]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                DEMO (local, not on-chain)
+              </span>
+              <span className="text-[9px] uppercase px-1 rounded bg-[var(--card)] text-[var(--muted)] border border-[var(--border)]">Sandbox</span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Links */}

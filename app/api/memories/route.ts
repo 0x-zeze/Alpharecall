@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
-import { getAllMemories, saveMemory } from "@/lib/walrus";
-
+import { getAllMemories, saveMemory, checkWalrusConnection } from "@/lib/walrus";
 
 export async function GET() {
   try {
-    const memories = await getAllMemories();
+    const [memories, connectionStatus] = await Promise.all([
+      getAllMemories(),
+      checkWalrusConnection(),
+    ]);
+
     return NextResponse.json({
       success: true,
       count: memories.length,
       data: memories,
-      isMainnetConnected: Boolean(process.env.MEMWAL_PRIVATE_KEY && process.env.MEMWAL_ACCOUNT_ID),
+      isMainnetConnected: connectionStatus.isMainnetConnected,
+      mode: connectionStatus.mode,
+      connectionError: connectionStatus.error,
       namespace: process.env.MEMWAL_NAMESPACE || "alpharecall",
     });
   } catch (err: unknown) {
@@ -24,7 +29,20 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { title, content, analyst, target, pick, outcome, credibilityDelta, category } = body;
+    const {
+      title,
+      content,
+      analyst,
+      target,
+      pick,
+      outcome,
+      credibilityDelta,
+      category,
+      odds,
+      stake,
+      confidence,
+      sportType,
+    } = body;
 
     if (!title || !target || !pick) {
       return NextResponse.json(
@@ -40,14 +58,19 @@ export async function POST(req: Request) {
       target,
       pick,
       outcome: outcome || "PENDING",
-      credibilityDelta: credibilityDelta !== undefined ? Number(credibilityDelta) : 0,
+      credibilityDelta: credibilityDelta ?? 0,
       category: category || "prediction",
+      sportType: sportType || "soccer",
+      odds: odds || "-110",
+      stake: Number(stake) || 250,
+      confidence: Number(confidence) || 4,
     });
 
     return NextResponse.json({
       success: true,
-      message: "Memory written successfully",
-      record: saved,
+      data: saved,
+      status: saved.writeStatus,
+      blobId: saved.blobId,
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);

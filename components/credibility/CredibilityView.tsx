@@ -13,6 +13,7 @@ import {
 import { BentoCard, BentoHeader } from "../ui/BentoCard";
 import { AnimatedNumber } from "../ui/AnimatedNumber";
 import { PredictionRecord } from "@/lib/types";
+import { getWalrusBlobExplorerUrl } from "@/lib/explorer";
 
 interface CredibilityViewProps {
   predictions: PredictionRecord[];
@@ -73,8 +74,8 @@ export function CredibilityView({
 
       existing.pnl += p.pnl || 0;
       existing.deltaSum += p.credibilityDelta || 0;
-      if (p.mainnetCommitHash) {
-        existing.walrusBlobs.push(p.mainnetCommitHash);
+      if (p.blobId && p.writeStatus === "confirmed") {
+        existing.walrusBlobs.push(p.blobId);
       }
 
       map.set(p.analyst, existing);
@@ -259,15 +260,18 @@ export function CredibilityView({
             {/* Walrus Hash or Local Status */}
             <div className="pt-3 border-t border-[var(--border)] mt-3 flex items-center justify-between text-[10px] font-mono-num text-[var(--muted)]">
               <span>Walrus Blob:</span>
-              <span
-                className={
-                  f.walrusBlob
-                    ? "text-[var(--accent)] font-semibold"
-                    : "text-[var(--muted)] italic"
-                }
-              >
-                {f.walrusBlob ? `${f.walrusBlob.slice(0, 16)}...` : "Local Ledger"}
-              </span>
+              {f.walrusBlob ? (
+                <a
+                  href={getWalrusBlobExplorerUrl(f.walrusBlob)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--accent)] font-semibold hover:underline"
+                >
+                  {f.walrusBlob.slice(0, 16)}...
+                </a>
+              ) : (
+                <span className="text-[var(--muted)] italic">Local Demo</span>
+              )}
             </div>
           </BentoCard>
         ))}
@@ -374,13 +378,18 @@ export function CredibilityView({
                 <span className="text-[var(--muted)] font-mono-num">
                   {m.dateStr || "Recent"}
                 </span>
-                {m.mainnetCommitHash ? (
-                  <span className="text-[var(--accent)] text-[10px]">
-                    Blob #{m.mainnetCommitHash.slice(0, 8)}
-                  </span>
+                {m.writeStatus === "confirmed" && m.blobId ? (
+                  <a
+                    href={getWalrusBlobExplorerUrl(m.blobId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--accent)] text-[10px] hover:underline"
+                  >
+                    Blob #{m.blobId.slice(0, 8)}...
+                  </a>
                 ) : (
                   <span className="text-[var(--muted)] text-[10px] italic">
-                    Local Verified
+                    Local Demo
                   </span>
                 )}
               </div>
