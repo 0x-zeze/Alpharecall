@@ -235,7 +235,7 @@ export function CredibilityView({
       {/* Before vs After Memory Recalibration Box */}
       <div className="bento-card p-6 space-y-4">
         <BentoHeader
-          title="The Total Recall Memory Loop: Before vs After"
+          title="The Autonomous Memory Loop: Before vs After"
           subtitle="Mathematical demonstration of how Walrus Memory dynamically sharpens consensus picks"
         />
 

@@ -1,9 +1,7 @@
 # AlphaRecall 🔮
 
-> **Minimalist Linear/Apple-inspired Bento Grid Dashboard for Sports & Crypto Predictions with Persistent Forecaster Credibility.**  
-> Built for the **Tatum x Walrus Hackathon: Total Recall** ($4,500 Global Prize Pool).  
-> **Track:** Track 01 — *Markets & Sports Prediction*  
-> **Eligible Awards:** Track 01 1st Prize ($500) + Best Walrus Memory ($500) + Best Tatum Integration.
+> **Decentralized Prediction & Forecaster Credibility Engine that Learns Over Time.**  
+> Minimalist Linear/Apple-inspired Bento Grid Dashboard powered by **Tatum Sui RPC Gateway** and **Walrus Memory on Mainnet**.
 
 ---
 
@@ -131,4 +129,4 @@ Open [http://localhost:3000](http://localhost:3000) to view the live Bento Grid 
 ---
 
 ## 📜 License
-MIT License. Built for the **Tatum x Walrus Total Recall Hackathon 2026**.
+MIT License.
