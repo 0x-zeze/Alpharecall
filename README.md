@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AlphaRecall 🔮
 
-## Getting Started
+> **The Decentralized Prediction & Forecaster Credibility Engine that Learns Over Time.**  
+> Built for the **Tatum x Walrus Hackathon: Total Recall** ($4,500 Global Prize Pool).  
+> **Target Track:** Track 01 — *Markets & Sports Prediction*  
+> **Eligible Awards:** Track 01 1st Prize ($500) + Best Walrus Memory ($500) + Best Tatum Integration.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## ⚡ Mission & Core Concept
+
+Standard prediction markets and betting trackers suffer from a critical flaw: **they have zero persistent memory**. When an analyst or AI agent makes a terrible forecast, the platform forgets by next week. Users are forced to manually sift through noise, recency bias, and uncalibrated consensus.
+
+**AlphaRecall solves this by giving predictions permanent memory.**
+By combining **Tatum Sui RPC & Data APIs** for live onchain verification with **Walrus Memory on Mainnet** (`@mysten-incubation/memwal`), AlphaRecall records every forecast, audits its resolution, and immutably recalibrates forecaster credibility scores across sessions. 
+
+The result is a prediction engine that **actually gets sharper over time**:
+- **Sessions 1–5:** Logs predictions across MLB, EPL, NBA, and SUI/crypto breakouts.
+- **Resolution Phase:** Validates game outcomes and onchain price peaks.
+- **The Memory Loop:** Queries Walrus Memory using semantic recall (`recall()`), automatically downweighting erratic analysts and elevating verified sharps.
+
+---
+
+## 🛠️ Tech Stack & Architecture
+
+```text
+       ┌────────────────────────────────────────────────────────┐
+       │                 AlphaRecall Web App                    │
+       │    (Next.js App Router, Tailwind CSS, Lucide Icons)     │
+       └───────────────────────────┬────────────────────────────┘
+                                   │
+                  ┌────────────────┴────────────────┐
+                  ▼                                 ▼
+   [ Tatum Sui JSON-RPC Gateway ]       [ Walrus Memory on Mainnet ]
+   • Endpoint: sui-mainnet.gateway.tatum.io • SDK: @mysten-incubation/memwal
+   • Live Checkpoint Sequence Numbers   • Namespace: "alpharecall"
+   • Reference Gas Price (MIST)         • 10+ Immutable Mainnet Blobs
+   • Address Balances & Onchain State   • Semantic Recall & Weight Tuning
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Frontend:** Next.js 16 (Turbopack, TypeScript, Tailwind CSS).
+- **Onchain Infrastructure:** Tatum Gateway JSON-RPC for Sui Mainnet.
+- **Decentralized Memory Layer:** Walrus Memory TypeScript SDK (`@mysten-incubation/memwal`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📋 Hackathon Submission Compliance Checklist
 
-## Learn More
+| Requirement | Implementation Status | Evidence in Code |
+|---|---|---|
+| **Track 01 Fit** | Markets & Sports prediction journal + credibility scoring | `app/page.tsx`, `lib/walrus.ts` |
+| **Walrus Memory Mainnet** | Writes & reads via `@mysten-incubation/memwal` on Mainnet | `lib/walrus.ts`, `app/api/memories` |
+| **10+ Memories on Mainnet** | 10 pre-curated prediction audits with one-click seeder | `app/api/seed/route.ts`, `scripts/seed-mainnet.mjs` |
+| **Tatum Sui RPC** | Live RPC integration for checkpoint, gas, and balance reads | `lib/tatum.ts`, `app/api/tatum` |
+| **Working Demo** | Compiles with Turbopack, zero errors, deployable to Vercel | Verified via `npm run build` |
+| **Public Repository** | Clean open-source MIT licensed codebase | Ready for GitHub push |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🚀 Getting Started
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. Clone & Install Dependencies
+```bash
+git clone https://github.com/your-username/alpharecall.git
+cd alpharecall
+npm install
+```
 
-## Deploy on Vercel
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env.local`:
+```bash
+cp .env.example .env.local
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Fill in your API keys:
+```env
+# Tatum API Key from https://dashboard.tatum.io/
+TATUM_API_KEY=your_tatum_api_key_here
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Walrus Memory credentials from https://memory.walrus.xyz/dashboard
+MEMWAL_PRIVATE_KEY=your_ed25519_private_key_in_hex
+MEMWAL_ACCOUNT_ID=your_memwal_account_id_on_sui
+MEMWAL_SERVER_URL=https://relayer.memory.walrus.xyz
+MEMWAL_NAMESPACE=alpharecall
+```
+
+### 3. Seed 10 Memories to Walrus Mainnet
+You can seed directly via CLI:
+```bash
+npm run seed
+```
+*Or simply launch the app and click the **"Seed 10 Memories"** button on the top-right of the dashboard.*
+
+### 4. Run Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to view the live dashboard.
+
+---
+
+## 💡 How AlphaRecall Learns Over Time (The Memory Loop)
+
+1. **Before Memory:** A standard prediction interface weights all user calls equally. When a forecaster fails 3 consecutive high-variance sports totals, users still see their calls at standard 1.0x weight.
+2. **With Walrus Memory:**
+   - Every resolved game writes a structured audit blob to Walrus Memory.
+   - Future queries call `memwal.recall({ query: "forecaster credibility history" })`.
+   - The consensus formula adjusts dynamically:
+     $$\text{Weight} = \max\left(0.4, 1.0 + \frac{\Delta_{\text{total}}}{20}\right)$$
+   - Proven forecasters (like `@DodgerBlueStats`) receive up to **2.4x weighting**, while uncalibrated accounts are dampened to **0.6x**.
+
+---
+
+## 📜 License
+MIT License. Built for the **Tatum x Walrus Total Recall Hackathon 2026**.
