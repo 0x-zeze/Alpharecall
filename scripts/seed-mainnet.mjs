@@ -77,11 +77,28 @@ async function main() {
     const item = CANONICAL_SEEDS[i];
     console.log(`[${i + 1}/${CANONICAL_SEEDS.length}] Committing: "${item.title}"`);
     
-    // Store full structured JSON payload with source: "walrus"
-    const payload = JSON.stringify({
-      ...item,
-      source: "walrus",
-      writeStatus: "confirmed",
+    // Store full structured ALPHARECALL_V1 memory payload
+    const payload = "ALPHARECALL_V1 " + JSON.stringify({
+      version: "1.0",
+      type: "resolution",
+      predictionId: item.id,
+      analyst: item.analyst,
+      category: item.sportType,
+      leagueOrAsset: item.leagueOrAsset,
+      title: item.title,
+      target: item.target,
+      pick: item.pick,
+      odds: item.odds,
+      stake: item.stake,
+      pnl: item.pnl,
+      outcome: item.outcome,
+      delta: item.credibilityDelta,
+      confidence: item.confidence,
+      resolvedAt: new Date(item.timestamp).toISOString(),
+      reasoning: item.reasoning,
+      postMortem: item.postMortem,
+      tags: item.tags,
+      evidence: { details: item.content },
     });
 
     const accepted = await memwal.remember(payload);

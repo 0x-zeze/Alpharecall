@@ -1,6 +1,12 @@
 import { MemWal } from "@mysten-incubation/memwal";
 import { PredictionRecord } from "./types";
 import { DEMO_PREDICTIONS } from "./demo-data";
+import {
+  encodeMemory,
+  decodeMemory,
+  payloadToPredictionRecord,
+  predictionRecordToPayload,
+} from "./memory-codec";
 
 export type MemoryRecord = PredictionRecord;
 
@@ -50,7 +56,6 @@ export async function checkWalrusConnection(): Promise<{
   }
 
   try {
-    // Health probe to verify actual live connection to Walrus Relayer
     const health = await client.health();
     if (health?.status === "ok" || health?.write_ready) {
       return {
@@ -75,7 +80,8 @@ export async function checkWalrusConnection(): Promise<{
 
 /**
  * Retrieve all memories from Walrus Memory on Mainnet via recall().
- * Reconstructs prediction records from recalled structured JSON.
+ * Executes semantic recall, filters and validates via decodeMemory(),
+ * drops invalid or non-prefixed items, and sorts by timestamp descending.
  * Falls back to canonical demo data ONLY if Walrus keys are missing or recall fails.
  */
 export async function getAllMemories(): Promise<MemoryRecord[]> {
@@ -85,48 +91,43 @@ export async function getAllMemories(): Promise<MemoryRecord[]> {
   }
 
   try {
-    const response = await client.recall({ query: "prediction and credibility audit" });
-    if (response?.results && response.results.length > 0) {
-      const recalled: MemoryRecord[] = response.results.map((item, idx) => {
-        let parsed: Partial<MemoryRecord> = {};
-        try {
-          parsed = JSON.parse(item.text);
-        } catch {
-          parsed = {
-            title: item.text.slice(0, 60),
-            content: item.text,
-          };
-        }
+    // Multi-query recall to maximize retrieval coverage from Walrus
+    const [recallRes1, recallRes2] = await Promise.all([
+      client.recall({ query: "ALPHARECALL_V1 resolution prediction", limit: 30 }),
+      client.recall({ query: "credibility audit sports crypto", limit: 20 }),
+    ]);
 
-        return {
-          id: parsed.id || `walrus-${idx + 1}`,
-          category: parsed.category || "audit",
-          sportType: parsed.sportType || "soccer",
-          leagueOrAsset: parsed.leagueOrAsset || "UCL",
-          title: parsed.title || `Walrus Memory #${idx + 1}`,
-          content: parsed.content || item.text,
-          analyst: parsed.analyst || "@WalrusSharps",
-          target: parsed.target || "Market Fixture",
-          pick: parsed.pick || "AUDIT",
-          odds: parsed.odds || "-110",
-          stake: parsed.stake ?? 250,
-          pnl: parsed.pnl ?? 0,
-          outcome: parsed.outcome || "ACCURATE",
-          credibilityDelta: parsed.credibilityDelta ?? 0,
-          confidence: parsed.confidence ?? 4,
-          timestamp: parsed.timestamp || (item.created_at ? new Date(item.created_at).getTime() : Date.now()),
-          dateStr: parsed.dateStr || (item.created_at ? new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Today"),
-          blobId: item.blob_id, // Real authentic Walrus blob_id
-          writeStatus: "confirmed",
-          source: "walrus",
-          reasoning: parsed.reasoning,
-          postMortem: parsed.postMortem,
-          tags: parsed.tags,
-        };
-      });
+    const combinedHits = [
+      ...(recallRes1?.results || []),
+      ...(recallRes2?.results || []),
+    ];
 
-      return recalled;
+    // Deduplicate hits by blob_id
+    const seenBlobs = new Set<string>();
+    const validRecords: MemoryRecord[] = [];
+
+    for (const item of combinedHits) {
+      if (!item.blob_id || seenBlobs.has(item.blob_id)) continue;
+      seenBlobs.add(item.blob_id);
+
+      // Strictly validate schema via decodeMemory()
+      const decoded = decodeMemory(item.text);
+      if (!decoded) {
+        // Discard invalid, malformed, or un-prefixed memories
+        continue;
+      }
+
+      const record = payloadToPredictionRecord(decoded, item.blob_id);
+      validRecords.push(record);
     }
+
+    if (validRecords.length > 0) {
+      // Sort chronologically newest first
+      validRecords.sort((a, b) => b.timestamp - a.timestamp);
+      return validRecords;
+    }
+
+    // If no valid Walrus memories were recalled yet, return local demo data
     return localDemoCache;
   } catch (error) {
     console.warn("Falling back to local demo data after Walrus recall failure:", error);
@@ -136,9 +137,10 @@ export async function getAllMemories(): Promise<MemoryRecord[]> {
 
 /**
  * Commit a new prediction or audit record to Walrus Memory.
+ * - Encodes using strict ALPHARECALL_V1 prefix and schema validator.
  * - If client is configured: submits remember(), waits for job, and records real blobId + writeStatus: "confirmed".
  * - If client is missing: writeStatus: "local-demo" without blobId.
- * - If remember fails: writeStatus: "failed" with explicit writeError. Never silently fakes success.
+ * - If remember fails: writeStatus: "failed" with explicit writeError.
  */
 export async function saveMemory(record: Partial<MemoryRecord> & {
   title: string;
@@ -150,7 +152,7 @@ export async function saveMemory(record: Partial<MemoryRecord> & {
   credibilityDelta: number;
 }): Promise<MemoryRecord> {
   const newRecord: MemoryRecord = {
-    id: record.id || `mem-${Date.now()}`,
+    id: record.id || `rec-${Date.now()}`,
     category: record.category || "prediction",
     sportType: record.sportType || "soccer",
     leagueOrAsset: record.leagueOrAsset,
@@ -184,12 +186,11 @@ export async function saveMemory(record: Partial<MemoryRecord> & {
   }
 
   try {
-    const memoryPayload = JSON.stringify({
-      ...newRecord,
-      source: "walrus",
-    });
+    // Encode via strictly validated memory codec
+    const payload = predictionRecordToPayload(newRecord);
+    const memoryString = encodeMemory(payload);
 
-    const accepted = await client.remember(memoryPayload);
+    const accepted = await client.remember(memoryString);
     if (!accepted?.job_id) {
       newRecord.writeStatus = "failed";
       newRecord.writeError = "Walrus relayer did not return an accepted job_id";
