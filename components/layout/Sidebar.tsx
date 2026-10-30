@@ -102,18 +102,34 @@ export function Sidebar({
           <div className="p-3 rounded-[10px] bg-[var(--card)] border border-[var(--border)] text-[11px] font-mono-num space-y-1.5">
             <div className="flex items-center justify-between text-[var(--muted)]">
               <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--win)] animate-pulse" />
-                Tatum Sui RPC
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    suiMetrics?.status === "live" ? "bg-[var(--win)] animate-pulse" : "bg-amber-500"
+                  }`}
+                />
+                Tatum Sui Gateway
               </span>
-              <span>{suiMetrics?.latencyMs ?? 84}ms</span>
+              <span>
+                {suiMetrics?.status === "live" && suiMetrics.latencyMs !== null
+                  ? `${suiMetrics.latencyMs}ms`
+                  : "offline"}
+              </span>
             </div>
             <div className="flex items-center justify-between font-medium text-[var(--text)]">
               <span>Checkpoint</span>
-              <span>#{suiMetrics?.checkpoint ? suiMetrics.checkpoint.slice(-6) : "105432"}</span>
+              <span>
+                {suiMetrics?.status === "live" && suiMetrics.checkpoint
+                  ? `#${suiMetrics.checkpoint.slice(-6)}`
+                  : "unavailable"}
+              </span>
             </div>
             <div className="flex items-center justify-between text-[var(--muted)]">
               <span>Reference Gas</span>
-              <span>{suiMetrics?.referenceGasPrice ?? "750 MIST"}</span>
+              <span>
+                {suiMetrics?.status === "live" && suiMetrics.referenceGasPrice
+                  ? suiMetrics.referenceGasPrice
+                  : "pending"}
+              </span>
             </div>
           </div>
 

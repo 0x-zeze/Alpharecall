@@ -56,11 +56,24 @@ export interface BankrollStats {
 }
 
 export interface SuiNodeStatus {
-  checkpoint: string;
-  epoch: string;
-  referenceGasPrice: string;
-  chainIdentifier: string;
-  latencyMs: number;
+  status: "live" | "unavailable";
+  checkpoint: string | null;
+  epoch: string | null;
+  referenceGasPrice: string | null;
+  chainIdentifier: string | null;
+  latencyMs: number | null;
   isTatumGateway: boolean;
   rpcUrl: string;
+  errorMessage?: string;
+}
+
+export interface PredictionResolutionResult {
+  predictionId: string;
+  resolved: boolean;
+  outcome?: "ACCURATE" | "FAILED" | "PENDING";
+  currentValue?: number | string;
+  targetValue?: number | string;
+  proofType: "tatum_sui_rpc" | "crypto_oracle_price" | "sports_settlement";
+  proofDetail: string;
+  timestamp: number;
 }
