@@ -8,18 +8,25 @@ import { JournalView } from "@/components/journal/JournalView";
 import { CredibilityView } from "@/components/credibility/CredibilityView";
 import { AnalyticsView } from "@/components/analytics/AnalyticsView";
 import { BankrollView } from "@/components/bankroll/BankrollView";
-import { PredictionRecord, PredictionCategory, SuiNodeStatus } from "@/lib/types";
-import { MOCK_PREDICTIONS } from "@/lib/mock-data";
+import { DEMO_PREDICTIONS } from "@/lib/demo-data";
+import {
+  PredictionRecord,
+  SuiNodeStatus,
+  TatumGatewayStatus,
+  SuiChainStatus,
+  PredictionCategory,
+} from "@/lib/types";
 import { Sparkles } from "lucide-react";
 
-export default function AlphaRecallApp() {
+export default function Home() {
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
+  const [predictions, setPredictions] = useState<PredictionRecord[]>(DEMO_PREDICTIONS);
   const [suiMetrics, setSuiMetrics] = useState<SuiNodeStatus | null>(null);
-  const [predictions, setPredictions] = useState<PredictionRecord[]>(MOCK_PREDICTIONS);
-  const [seeding, setSeeding] = useState(false);
+  const [tatumStatus, setTatumStatus] = useState<TatumGatewayStatus | null>(null);
+  const [suiChainStatus, setSuiChainStatus] = useState<SuiChainStatus | null>(null);
+  const [seeding, setSeeding] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isMainnetConnected, setIsMainnetConnected] = useState<boolean>(false);
-  const [walrusMode, setWalrusMode] = useState<"live" | "demo">("demo");
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -35,14 +42,15 @@ export default function AlphaRecallApp() {
       ]);
 
       const tatumData = await tatumRes.json();
-      if (tatumData?.success) {
+      if (tatumData?.success && tatumData.data) {
         setSuiMetrics(tatumData.data);
+        if (tatumData.data.tatum) setTatumStatus(tatumData.data.tatum);
+        if (tatumData.data.sui) setSuiChainStatus(tatumData.data.sui);
       }
 
       const memData = await memRes.json();
       if (memData?.success) {
         setIsMainnetConnected(Boolean(memData.isMainnetConnected));
-        setWalrusMode(memData.mode || "demo");
 
         if (memData.data?.length > 0) {
           const liveRecords: PredictionRecord[] = memData.data.map((m: Partial<PredictionRecord>, idx: number) => ({
@@ -57,8 +65,8 @@ export default function AlphaRecallApp() {
             odds: m.odds || "-110",
             stake: m.stake || 250,
             pnl: m.pnl || (m.outcome === "ACCURATE" ? 200 : m.outcome === "FAILED" ? -250 : 0),
-            outcome: m.outcome || "ACCURATE",
-            credibilityDelta: m.credibilityDelta ?? 5,
+            outcome: m.outcome || "PENDING",
+            credibilityDelta: m.credibilityDelta ?? 0,
             confidence: m.confidence || 4,
             timestamp: m.timestamp || Date.now(),
             dateStr: m.dateStr || new Date(m.timestamp || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
@@ -66,13 +74,20 @@ export default function AlphaRecallApp() {
             writeStatus: m.writeStatus || "confirmed",
             source: m.source || "walrus",
             reasoning: m.reasoning || m.content,
+            deadline: m.deadline,
+            direction: m.direction,
+            targetPrice: m.targetPrice,
+            asset: m.asset,
+            suiCheckpoint: m.suiCheckpoint,
+            suiCheckpointDigest: m.suiCheckpointDigest,
+            oracleFallbackUsed: m.oracleFallbackUsed,
           }));
 
-          // Merge without duplicates
+          // Merge without duplicates based on ID
           const merged = [...liveRecords];
-          MOCK_PREDICTIONS.forEach((mp) => {
-            if (!merged.some((r) => r.id === mp.id || r.target === mp.target)) {
-              merged.push(mp);
+          DEMO_PREDICTIONS.forEach((dp) => {
+            if (!merged.some((r) => r.id === dp.id)) {
+              merged.push(dp);
             }
           });
           setPredictions(merged);
@@ -103,11 +118,13 @@ export default function AlphaRecallApp() {
     try {
       const res = await fetch("/api/seed", { method: "POST" });
       const data = await res.json();
-      if (data?.success) {
-        showToast("✓ Successfully committed 10 memories to Walrus Mainnet!");
+      if (res.status === 403) {
+        showToast("ℹ Seeding is locked in production without admin secret.");
+      } else if (data?.success) {
+        showToast("✓ " + (data.message || "Seeding complete!"));
         fetchData();
       } else {
-        showToast("Seeding failed: " + (data?.error || "Unknown"));
+        showToast("Seeding: " + (data?.error || "Unknown"));
       }
     } catch (err: unknown) {
       const errStr = err instanceof Error ? err.message : String(err);
@@ -126,6 +143,10 @@ export default function AlphaRecallApp() {
     analyst: string;
     confidence: number;
     reasoning: string;
+    deadline?: string;
+    direction?: "above" | "below";
+    targetPrice?: number;
+    asset?: string;
   }) => {
     try {
       const res = await fetch("/api/memories", {
@@ -133,28 +154,36 @@ export default function AlphaRecallApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: `${data.target}: ${data.pick}`,
-          content: data.reasoning || `Prediction on ${data.target} by ${data.analyst}`,
+          content: data.reasoning || `Forecast on ${data.target} by ${data.analyst}`,
           analyst: data.analyst,
           target: data.target,
           pick: data.pick,
-          outcome: "PENDING",
-          credibilityDelta: 0,
           category: "prediction",
           odds: data.odds,
           stake: data.stake,
           confidence: data.confidence,
           sportType: data.sportType,
+          deadline: data.deadline,
+          direction: data.direction,
+          targetPrice: data.targetPrice,
+          asset: data.asset,
         }),
       });
 
       const resData = await res.json();
-      if (resData?.success) {
-        showToast("✓ Prediction committed to Walrus Memory!");
-        fetchData();
+      if (!res.ok || !resData?.success) {
+        const errorMsg = resData?.error || `HTTP ${res.status} error`;
+        showToast("✗ " + errorMsg);
+        return { success: false, error: errorMsg };
       }
+
+      showToast(`✓ Forecast committed! Sui Anchor: ${resData.suiAnchor || "pending"}`);
+      fetchData();
+      return { success: true };
     } catch (err: unknown) {
       const errStr = err instanceof Error ? err.message : String(err);
       showToast("Error adding prediction: " + errStr);
+      return { success: false, error: errStr };
     }
   };
 
@@ -169,16 +198,17 @@ export default function AlphaRecallApp() {
           </div>
         )}
 
-        {/* Sidebar Navigation */}
+        {/* Sidebar */}
         <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           suiMetrics={suiMetrics}
+          tatumStatus={tatumStatus}
+          suiChainStatus={suiChainStatus}
           onSeed={handleSeedMemories}
           seeding={seeding}
           walrusMemoriesCount={predictions.length}
           isMainnetConnected={isMainnetConnected}
-          walrusMode={walrusMode}
         />
 
         {/* Main Work Area */}
@@ -186,7 +216,6 @@ export default function AlphaRecallApp() {
           {activeTab === "dashboard" && (
             <DashboardView
               predictions={predictions}
-              suiMetrics={suiMetrics}
               onNavigateJournal={() => setActiveTab("journal")}
             />
           )}

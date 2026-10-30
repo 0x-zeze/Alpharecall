@@ -46,9 +46,11 @@ describe("lib/resolver - calculateOutcomeDelta", () => {
 
 describe("lib/resolver - Mocked Resolver Execution & Idempotency", () => {
   const originalFetch = global.fetch;
+  const mockNow = 1730035000000;
 
   beforeEach(() => {
     process.env.TATUM_API_KEY = "mock_tatum_key_12345";
+    process.env.ALLOW_PUBLIC_ORACLE_FALLBACK = "true";
   });
 
   afterEach(() => {
@@ -71,8 +73,12 @@ describe("lib/resolver - Mocked Resolver Execution & Idempotency", () => {
     credibilityDelta: 0,
     confidence: 5,
     timestamp: 1730000000000,
-    dateStr: "Oct 27",
+    dateStr: "Oct 27, 2024",
     writeStatus: "local-demo",
+    deadline: new Date(mockNow - 1800000).toISOString(), // 30m ago (within 6h grace)
+    direction: "above",
+    targetPrice: 1.85,
+    asset: "SUI",
   };
 
   it("should resolve ACCURATE when Tatum rate exceeds targetPrice for above condition", async () => {
@@ -86,7 +92,7 @@ describe("lib/resolver - Mocked Resolver Execution & Idempotency", () => {
       return { ok: false } as Response;
     });
 
-    const result = await resolveCryptoPrediction(mockCryptoPrediction);
+    const result = await resolveCryptoPrediction(mockCryptoPrediction, mockNow);
 
     expect(result.status).toBe("resolved");
     expect(result.outcome).toBe("ACCURATE");
@@ -106,7 +112,7 @@ describe("lib/resolver - Mocked Resolver Execution & Idempotency", () => {
       return { ok: false } as Response;
     });
 
-    const result = await resolveCryptoPrediction(mockCryptoPrediction);
+    const result = await resolveCryptoPrediction(mockCryptoPrediction, mockNow);
 
     expect(result.status).toBe("resolved");
     expect(result.outcome).toBe("FAILED");
@@ -114,7 +120,7 @@ describe("lib/resolver - Mocked Resolver Execution & Idempotency", () => {
     expect(result.evidence?.price).toBe(1.25);
   });
 
-  it("should fallback to public oracle when Tatum API returns an error", async () => {
+  it("should fallback to public oracle when Tatum API returns an error and fallback is enabled", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("api.tatum.io")) {
         return {
@@ -132,7 +138,7 @@ describe("lib/resolver - Mocked Resolver Execution & Idempotency", () => {
       return { ok: false } as Response;
     });
 
-    const result = await resolveCryptoPrediction(mockCryptoPrediction);
+    const result = await resolveCryptoPrediction(mockCryptoPrediction, mockNow);
 
     expect(result.status).toBe("resolved");
     expect(result.outcome).toBe("ACCURATE");
@@ -152,11 +158,11 @@ describe("lib/resolver - Mocked Resolver Execution & Idempotency", () => {
     });
 
     // Run 1: resolves the prediction
-    const report1 = await resolveDuePredictions([mockCryptoPrediction]);
+    const report1 = await resolveDuePredictions([mockCryptoPrediction], mockNow);
     expect(report1.resolvedCount).toBe(1);
 
     // Run 2: same prediction must be skipped idempotently!
-    const report2 = await resolveDuePredictions([mockCryptoPrediction]);
+    const report2 = await resolveDuePredictions([mockCryptoPrediction], mockNow);
     expect(report2.resolvedCount).toBe(0);
     expect(report2.skippedCount).toBe(1);
     expect(report2.results[0].status).toBe("skipped");

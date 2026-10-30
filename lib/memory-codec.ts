@@ -7,6 +7,11 @@ export interface MemoryEvidence {
   finalEvent?: string;
   details?: string;
   onchainMetrics?: string;
+  source?: string;
+  method?: string;
+  price?: number;
+  targetPrice?: number;
+  fetchedAt?: string;
   [key: string]: unknown;
 }
 
@@ -31,6 +36,16 @@ export interface MemoryPayloadV1 {
   postMortem?: string;
   tags?: string[];
   evidence?: MemoryEvidence;
+
+  // BAGIAN 2: Optional Forecast Target & Deadline fields
+  deadline?: string; // ISO-8601 string, e.g. "2026-11-01T00:00:00.000Z"
+  direction?: "above" | "below";
+  targetPrice?: number;
+  asset?: string; // e.g. "SUI", "BTC", "ETH"
+
+  // BAGIAN 3: Optional Sui Anchor fields
+  suiCheckpoint?: string | null;
+  suiCheckpointDigest?: string | null;
 }
 
 /**
@@ -74,6 +89,12 @@ export function encodeMemory(payload: MemoryPayloadV1): string {
     postMortem: payload.postMortem,
     tags: Array.isArray(payload.tags) ? payload.tags : [],
     evidence: payload.evidence,
+    deadline: payload.deadline,
+    direction: payload.direction,
+    targetPrice: payload.targetPrice,
+    asset: payload.asset,
+    suiCheckpoint: payload.suiCheckpoint,
+    suiCheckpointDigest: payload.suiCheckpointDigest,
   };
 
   return `${MEMORY_PREFIX}${JSON.stringify(normalized)}`;
@@ -83,6 +104,7 @@ export function encodeMemory(payload: MemoryPayloadV1): string {
  * Parses and strictly validates a raw Walrus memory string.
  * Rejects and returns null if the string lacks the prefix, is malformed JSON,
  * or fails schema type and invariant checks.
+ * Backward compatible: accepts all legacy v1 memories without optional fields.
  */
 export function decodeMemory(rawText: string | null | undefined): MemoryPayloadV1 | null {
   if (!rawText || typeof rawText !== "string") {
@@ -136,6 +158,14 @@ export function decodeMemory(rawText: string | null | undefined): MemoryPayloadV
     resolvedAtStr = new Date().toISOString();
   }
 
+  // Optional extensions (safe and backward-compatible)
+  const deadline = typeof obj.deadline === "string" ? obj.deadline : undefined;
+  const direction = obj.direction === "above" || obj.direction === "below" ? obj.direction : undefined;
+  const targetPrice = typeof obj.targetPrice === "number" && !isNaN(obj.targetPrice) ? obj.targetPrice : undefined;
+  const asset = typeof obj.asset === "string" ? obj.asset : undefined;
+  const suiCheckpoint = typeof obj.suiCheckpoint === "string" ? obj.suiCheckpoint : null;
+  const suiCheckpointDigest = typeof obj.suiCheckpointDigest === "string" ? obj.suiCheckpointDigest : null;
+
   return {
     version: "1.0",
     type: obj.type === "prediction" ? "prediction" : "resolution",
@@ -157,6 +187,12 @@ export function decodeMemory(rawText: string | null | undefined): MemoryPayloadV
     postMortem: typeof obj.postMortem === "string" ? obj.postMortem : undefined,
     tags: Array.isArray(obj.tags) ? (obj.tags.filter((t) => typeof t === "string") as string[]) : [],
     evidence: typeof obj.evidence === "object" && obj.evidence !== null ? (obj.evidence as MemoryEvidence) : undefined,
+    deadline,
+    direction,
+    targetPrice,
+    asset,
+    suiCheckpoint,
+    suiCheckpointDigest,
   };
 }
 
@@ -194,6 +230,12 @@ export function payloadToPredictionRecord(
     reasoning: payload.reasoning,
     postMortem: payload.postMortem,
     tags: payload.tags,
+    deadline: payload.deadline,
+    direction: payload.direction,
+    targetPrice: payload.targetPrice,
+    asset: payload.asset,
+    suiCheckpoint: payload.suiCheckpoint,
+    suiCheckpointDigest: payload.suiCheckpointDigest,
   };
 }
 
@@ -224,5 +266,11 @@ export function predictionRecordToPayload(record: PredictionRecord): MemoryPaylo
     evidence: {
       details: record.content,
     },
+    deadline: record.deadline,
+    direction: record.direction,
+    targetPrice: record.targetPrice,
+    asset: record.asset,
+    suiCheckpoint: record.suiCheckpoint,
+    suiCheckpointDigest: record.suiCheckpointDigest,
   };
 }

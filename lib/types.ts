@@ -27,6 +27,17 @@ export interface PredictionRecord {
   reasoning?: string;
   postMortem?: string;
   tags?: string[];
+
+  // BAGIAN 2: Optional Forecast Target & Deadline fields
+  deadline?: string; // ISO-8601 string, e.g. "2026-11-01T00:00:00.000Z"
+  direction?: "above" | "below";
+  targetPrice?: number;
+  asset?: string; // e.g. "SUI", "BTC", "ETH"
+
+  // BAGIAN 3: Optional Sui Anchor fields
+  suiCheckpoint?: string | null;
+  suiCheckpointDigest?: string | null;
+  oracleFallbackUsed?: boolean;
 }
 
 export interface ForecasterStats {
@@ -59,16 +70,33 @@ export interface BankrollStats {
   activeRisk: number;
 }
 
-export interface SuiNodeStatus {
+export interface TatumGatewayStatus {
+  ok: boolean;
+  status: "live" | "unavailable";
+  plan: string | null;
+  creditLimit: number | null;
+  usage: number | null;
+  latencyMs: number | null;
+  version: string | null;
+  error?: string | null;
+}
+
+export interface SuiChainStatus {
   ok: boolean;
   status: "live" | "unavailable";
   checkpoint: string | null;
+  checkpointDigest: string | null;
   epoch: string | null;
   referenceGasPrice: string | null;
-  chainIdentifier: string | null;
+  chainId: string | null;
   latencyMs: number | null;
-  isTatumGateway: boolean;
   rpcUrl: string;
+  isTatumGateway: boolean;
+  error?: string | null;
+}
+
+// Backward-compatible alias for existing components
+export interface SuiNodeStatus extends SuiChainStatus {
   errorMessage?: string;
 }
 

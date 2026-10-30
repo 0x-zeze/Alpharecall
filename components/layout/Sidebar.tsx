@@ -11,27 +11,32 @@ import {
   Moon,
   Database,
   RefreshCw,
+  Server,
+  Network,
 } from "lucide-react";
 import { useTheme } from "../theme/ThemeProvider";
-import { SuiNodeStatus } from "@/lib/types";
+import { SuiNodeStatus, TatumGatewayStatus, SuiChainStatus } from "@/lib/types";
 
 export type NavTab = "dashboard" | "journal" | "credibility" | "analytics" | "bankroll";
 
 interface SidebarProps {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
-  suiMetrics: SuiNodeStatus | null;
+  suiMetrics?: SuiNodeStatus | null;
+  tatumStatus?: TatumGatewayStatus | null;
+  suiChainStatus?: SuiChainStatus | null;
   onSeed: () => void;
   seeding: boolean;
   walrusMemoriesCount: number;
   isMainnetConnected?: boolean;
-  walrusMode?: "live" | "demo";
 }
 
 export function Sidebar({
   activeTab,
   setActiveTab,
   suiMetrics,
+  tatumStatus,
+  suiChainStatus,
   onSeed,
   seeding,
   walrusMemoriesCount,
@@ -47,6 +52,18 @@ export function Sidebar({
     { id: "bankroll", label: "Bankroll", icon: Wallet },
   ];
 
+  // Resolve metrics from either split or legacy props
+  const resolvedTatum = tatumStatus || (suiMetrics ? {
+    ok: suiMetrics.isTatumGateway,
+    status: suiMetrics.isTatumGateway ? "live" : "unavailable",
+    plan: "Free",
+    creditLimit: 100000,
+    latencyMs: suiMetrics.latencyMs,
+    version: null,
+  } as TatumGatewayStatus : null);
+
+  const resolvedSui = suiChainStatus || suiMetrics;
+
   return (
     <>
       {/* Desktop / Tablet Left Slim Sidebar */}
@@ -57,38 +74,22 @@ export function Sidebar({
             Ω
           </div>
           <div className="leading-tight">
-            <span className="font-semibold text-sm tracking-tight text-[var(--text)] block">
-              AlphaRecall
-            </span>
-            <span className="text-[11px] text-[var(--muted)] font-mono-num block">
-              Walrus × Tatum
-            </span>
+            <h1 className="font-bold text-sm text-[var(--text)] tracking-tight">AlphaRecall</h1>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isMainnetConnected ? "bg-[var(--win)]" : "bg-amber-500"
+                }`}
+              />
+              <span className="text-[10px] text-[var(--muted)] font-mono-num font-medium">
+                {isMainnetConnected ? "LIVE (Walrus mainnet)" : "DEMO (local, not on-chain)"}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Global Network State Badge (LIVE vs DEMO) */}
-        <div className="mb-4">
-          {isMainnetConnected ? (
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-[8px] bg-[var(--win-bg)] border border-[var(--win)]/30 text-[10px] font-mono-num font-bold text-[var(--win)]">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--win)] animate-pulse" />
-                LIVE (Walrus mainnet)
-              </span>
-              <span className="text-[9px] uppercase px-1 rounded bg-[var(--win)]/20 text-[var(--win)]">Active</span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-[8px] bg-[var(--border-subtle)] border border-[var(--border)] text-[10px] font-mono-num text-[var(--muted)]">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                DEMO (local, not on-chain)
-              </span>
-              <span className="text-[9px] uppercase px-1 rounded bg-[var(--card)] text-[var(--muted)] border border-[var(--border)]">Sandbox</span>
-            </div>
-          )}
-        </div>
-
-        {/* Navigation Links */}
-        <nav className="flex-1 space-y-1 py-2">
+        {/* Navigation Tabs */}
+        <nav className="flex-1 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -96,70 +97,89 @@ export function Sidebar({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-[10px] text-xs font-medium transition duration-150 ${
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-[8px] text-xs font-medium transition ${
                   isActive
-                    ? "bg-[var(--card)] text-[var(--text)] border border-[var(--border)] shadow-sm font-semibold"
-                    : "text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--card)]/50"
+                    ? "bg-[var(--card)] text-[var(--text)] border border-[var(--border)] shadow-xs"
+                    : "text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--border-subtle)]/50"
                 }`}
               >
-                <Icon
-                  className={`w-4 h-4 shrink-0 transition-colors ${
-                    isActive ? "text-[var(--accent)]" : "text-[var(--muted)]"
-                  }`}
-                />
+                <Icon className={`w-4 h-4 ${isActive ? "text-[var(--accent)]" : ""}`} />
                 <span>{item.label}</span>
-                {item.id === "credibility" && (
-                  <span className="ml-auto text-[10px] font-mono-num px-1.5 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
-                    2.2x
-                  </span>
+                {isActive && (
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
                 )}
               </button>
             );
           })}
         </nav>
 
-        {/* Network & Live State Box */}
-        <div className="pt-4 border-t border-[var(--border)] space-y-3">
-          {/* Tatum Live Ticker */}
-          <div className="p-3 rounded-[10px] bg-[var(--card)] border border-[var(--border)] text-[11px] font-mono-num space-y-1.5">
+        {/* Telemetry & State Boxes */}
+        <div className="pt-3 border-t border-[var(--border)] space-y-2.5">
+          {/* Box 1: Tatum Data Gateway Telemetry */}
+          <div className="p-2.5 rounded-[10px] bg-[var(--card)] border border-[var(--border)] text-[11px] font-mono-num space-y-1">
             <div className="flex items-center justify-between text-[var(--muted)]">
               <span className="flex items-center gap-1.5">
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
-                    suiMetrics?.status === "live" ? "bg-[var(--win)] animate-pulse" : "bg-amber-500"
+                    resolvedTatum?.status === "live" ? "bg-[var(--win)] animate-pulse" : "bg-amber-500"
                   }`}
                 />
-                Tatum Sui Gateway
+                <Server className="w-3 h-3" />
+                Tatum Data Gateway
               </span>
               <span>
-                {suiMetrics?.status === "live" && suiMetrics.latencyMs !== null
-                  ? `${suiMetrics.latencyMs}ms`
+                {resolvedTatum?.status === "live" && resolvedTatum.latencyMs !== null
+                  ? `${resolvedTatum.latencyMs}ms`
                   : "offline"}
               </span>
             </div>
-            <div className="flex items-center justify-between font-medium text-[var(--text)]">
-              <span>Checkpoint</span>
-              <span>
-                {suiMetrics?.status === "live" && suiMetrics.checkpoint
-                  ? `#${suiMetrics.checkpoint.slice(-6)}`
-                  : "unavailable"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-[var(--muted)]">
-              <span>Reference Gas</span>
-              <span>
-                {suiMetrics?.status === "live" && suiMetrics.referenceGasPrice
-                  ? suiMetrics.referenceGasPrice
-                  : "pending"}
+            <div className="flex items-center justify-between text-[var(--text)] text-[10px]">
+              <span className="text-[var(--muted)]">Plan</span>
+              <span className="font-semibold text-[var(--accent)]">
+                {resolvedTatum?.status === "live" && resolvedTatum.plan ? resolvedTatum.plan : "—"}
               </span>
             </div>
           </div>
 
-          {/* Walrus Memory Status & Seeder */}
-          <div className="p-3 rounded-[10px] bg-[var(--card)] border border-[var(--border)] text-[11px] space-y-2">
+          {/* Box 2: Sui RPC Gateway Telemetry */}
+          <div className="p-2.5 rounded-[10px] bg-[var(--card)] border border-[var(--border)] text-[11px] font-mono-num space-y-1">
+            <div className="flex items-center justify-between text-[var(--muted)]">
+              <span className="flex items-center gap-1.5">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    resolvedSui?.status === "live" ? "bg-[var(--win)] animate-pulse" : "bg-amber-500/60"
+                  }`}
+                />
+                <Network className="w-3 h-3" />
+                Sui RPC Node
+              </span>
+              <span className="text-[10px]">
+                {resolvedSui?.status === "live" ? "Connected" : "unavailable"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between font-medium text-[var(--text)] text-[10px]">
+              <span className="text-[var(--muted)]">Checkpoint</span>
+              <span>
+                {resolvedSui?.status === "live" && resolvedSui.checkpoint
+                  ? `#${resolvedSui.checkpoint.slice(-8)}`
+                  : "—"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[var(--muted)] text-[10px]">
+              <span>Epoch</span>
+              <span>
+                {resolvedSui?.status === "live" && resolvedSui.epoch
+                  ? resolvedSui.epoch
+                  : "—"}
+              </span>
+            </div>
+          </div>
+
+          {/* Box 3: Walrus Memory Status & Seeder */}
+          <div className="p-2.5 rounded-[10px] bg-[var(--card)] border border-[var(--border)] text-[11px] space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-[var(--muted)] font-mono-num">
-                <Database className="w-3.5 h-3.5 text-[var(--accent)]" />
+              <span className="flex items-center gap-1.5 text-[var(--muted)] font-mono-num text-[10px]">
+                <Database className="w-3 h-3 text-[var(--accent)]" />
                 Walrus Mainnet
               </span>
               <span className="font-mono-num font-semibold text-[var(--win)] text-[10px]">
@@ -170,30 +190,30 @@ export function Sidebar({
             <button
               onClick={onSeed}
               disabled={seeding}
-              className="w-full flex items-center justify-center gap-2 py-1.5 px-2.5 rounded-[8px] bg-[var(--border)] hover:bg-[var(--accent)]/15 hover:text-[var(--accent)] text-[var(--text)] text-[11px] font-medium transition border border-transparent hover:border-[var(--accent)]/30 disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-1.5 py-1 px-2 rounded-[6px] bg-[var(--border)] hover:bg-[var(--accent)]/15 hover:text-[var(--accent)] text-[var(--text)] text-[10px] font-medium transition border border-transparent hover:border-[var(--accent)]/30 disabled:opacity-50"
             >
               <RefreshCw className={`w-3 h-3 ${seeding ? "animate-spin" : ""}`} />
-              <span>{seeding ? "Writing to Mainnet..." : "Seed 10 Memories"}</span>
+              <span>{seeding ? "Seeding..." : "Seed 16 Memories"}</span>
             </button>
           </div>
 
           {/* Theme Switcher Toggle */}
           <div className="flex items-center justify-between px-1 pt-1">
-            <span className="text-xs text-[var(--muted)] font-mono-num">Appearance</span>
+            <span className="text-[11px] text-[var(--muted)] font-mono-num">Appearance</span>
             <button
               onClick={toggleTheme}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-[8px] bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--text)] hover:border-[var(--accent)]/40 transition"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-[8px] bg-[var(--card)] border border-[var(--border)] text-[11px] text-[var(--text)] hover:border-[var(--accent)]/40 transition"
               aria-label="Toggle dark/light mode"
             >
               {theme === "dark" ? (
                 <>
-                  <Moon className="w-3.5 h-3.5 text-[var(--accent)]" />
-                  <span className="text-[11px]">Dark</span>
+                  <Moon className="w-3 h-3 text-[var(--accent)]" />
+                  <span className="text-[10px]">Dark</span>
                 </>
               ) : (
                 <>
-                  <Sun className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="text-[11px]">Light</span>
+                  <Sun className="w-3 h-3 text-amber-500" />
+                  <span className="text-[10px]">Light</span>
                 </>
               )}
             </button>
@@ -201,8 +221,8 @@ export function Sidebar({
         </div>
       </aside>
 
-      {/* Mobile Bottom Tab Bar */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-[var(--border)] bg-[var(--card)]/95 backdrop-blur-md px-3 py-2 flex items-center justify-around">
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg)] border-t border-[var(--border)] px-4 py-2 flex items-center justify-around backdrop-blur-md">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -210,12 +230,12 @@ export function Sidebar({
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 py-1 px-2 text-[10px] font-medium transition ${
+              className={`flex flex-col items-center gap-1 p-1 transition ${
                 isActive ? "text-[var(--accent)]" : "text-[var(--muted)]"
               }`}
             >
               <Icon className="w-4 h-4" />
-              <span>{item.label}</span>
+              <span className="text-[9px] font-mono-num capitalize">{item.label}</span>
             </button>
           );
         })}

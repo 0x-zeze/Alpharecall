@@ -8,6 +8,7 @@
     "start": "next start",
     "seed": "node --env-file=.env.local scripts/seed-mainnet.mjs",
     "keygen": "node scripts/generate-delegate-key.mjs",
+    "forecast:seed": "node scripts/post-forward-predictions.mjs",
     "test": "node --no-warnings --experimental-strip-types --loader ./scripts/ts-loader.mjs scripts/run-tests.mjs",
     "lint": "eslint"
   },

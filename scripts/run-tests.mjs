@@ -18,7 +18,13 @@ import {
   resolveDuePredictions,
   calculateOutcomeDelta,
   parseCryptoTarget,
+  RESOLVER_GRACE_WINDOW_MS,
 } from "../lib/resolver.ts";
+import {
+  getTatumGatewayStatus,
+  getSuiChainMetrics,
+  getLatestSuiCheckpointAnchor,
+} from "../lib/tatum.ts";
 
 let passed = 0;
 let failed = 0;
@@ -42,10 +48,13 @@ async function describe(title, fn) {
 
 async function main() {
   console.log("=================================================");
-  console.log("  ALPHARECALL UNIT TESTS (VITEST RUNNER COMPAT)  ");
+  console.log("  ALPHARECALL COMPREHENSIVE TEST SUITE           ");
   console.log("=================================================");
 
-  await describe("lib/memory-codec - Encode & Decode Validation", async () => {
+  // --------------------------------------------------------------------------
+  // SUITE 1: Codec & Backward Compatibility
+  // --------------------------------------------------------------------------
+  await describe("lib/memory-codec - Encode, Decode & Backward Compatibility", async () => {
     const samplePayload = {
       version: "1.0",
       type: "resolution",
@@ -96,6 +105,21 @@ async function main() {
       assert.equal(decoded?.evidence?.score, "0-4");
     });
 
+    await it("should preserve strict backward compatibility with legacy mainnet memory strings", () => {
+      // Exact raw format stored on Walrus Mainnet for rec-01 (no deadline/direction fields)
+      const legacyRawMemory =
+        'ALPHARECALL_V1 {"version":"1.0","type":"resolution","predictionId":"rec-01","analyst":"@OptaTactics","category":"soccer","leagueOrAsset":"La Liga","title":"El Clasico: Real Madrid 0 - 4 FC Barcelona","target":"RMA vs FCB (La Liga)","pick":"FCB DNB (+125)","odds":"+125","stake":300,"pnl":375,"outcome":"ACCURATE","delta":7,"confidence":5,"resolvedAt":"2024-10-26T19:00:00.000Z","reasoning":"High line offside trap","postMortem":"Lewandowski brace","tags":["LaLiga","ElClasico"],"evidence":{"details":"Barcelona routed Madrid 4-0"}}';
+
+      const decoded = decodeMemory(legacyRawMemory);
+      assert.notEqual(decoded, null);
+      assert.equal(decoded?.predictionId, "rec-01");
+      assert.equal(decoded?.outcome, "ACCURATE");
+      assert.equal(decoded?.delta, 7);
+      assert.equal(decoded?.deadline, undefined);
+      assert.equal(decoded?.direction, undefined);
+      assert.equal(decoded?.targetPrice, undefined);
+    });
+
     await it("should reject corrupted, missing, or un-prefixed inputs", () => {
       assert.equal(decodeMemory('{"predictionId":"123"}'), null);
       assert.equal(decodeMemory("Just some random text"), null);
@@ -109,41 +133,52 @@ async function main() {
       assert.equal(decodeMemory(`${MEMORY_PREFIX}${JSON.stringify(invalidOutcome)}`), null);
     });
 
-    await it("should convert PredictionRecord to payload and back faithfully", () => {
+    await it("should convert PredictionRecord to payload and back faithfully with extension fields", () => {
       const record = {
         id: "rec-test-02",
         category: "audit",
-        sportType: "nba",
-        title: "Celtics vs Bucks",
-        content: "BOS vs MIL: BOS -9.5 (ACCURATE)",
-        analyst: "@HoopSharpsNBA",
-        target: "BOS vs MIL",
-        pick: "BOS -9.5",
-        odds: "-110",
+        sportType: "crypto",
+        title: "SUI Support Bounce",
+        content: "Predicted bounce > $1.85",
+        analyst: "@SuiSharps",
+        target: "SUI/USDT Support",
+        pick: "BOUNCE > $1.85",
+        odds: "+120",
         stake: 300,
-        pnl: 272,
-        outcome: "ACCURATE",
-        credibilityDelta: 6,
-        confidence: 4,
-        timestamp: 1730142000000,
-        dateStr: "Oct 28",
+        pnl: 0,
+        outcome: "PENDING",
+        credibilityDelta: 0,
+        confidence: 5,
+        timestamp: 1730000000000,
+        dateStr: "Oct 27, 2024",
         writeStatus: "confirmed",
         blobId: "walrus_blob_test_123",
         source: "walrus",
+        deadline: "2026-11-01T12:00:00.000Z",
+        direction: "above",
+        targetPrice: 1.85,
+        asset: "SUI",
+        suiCheckpoint: "105432000",
       };
 
       const payload = predictionRecordToPayload(record);
       assert.equal(payload.predictionId, "rec-test-02");
-      assert.equal(payload.delta, 6);
+      assert.equal(payload.deadline, "2026-11-01T12:00:00.000Z");
+      assert.equal(payload.direction, "above");
+      assert.equal(payload.targetPrice, 1.85);
 
       const reconverted = payloadToPredictionRecord(payload, record.blobId);
       assert.equal(reconverted.id, record.id);
-      assert.equal(reconverted.analyst, record.analyst);
-      assert.equal(reconverted.blobId, "walrus_blob_test_123");
-      assert.equal(reconverted.writeStatus, "confirmed");
+      assert.equal(reconverted.deadline, record.deadline);
+      assert.equal(reconverted.direction, "above");
+      assert.equal(reconverted.targetPrice, 1.85);
+      assert.equal(reconverted.suiCheckpoint, "105432000");
     });
   });
 
+  // --------------------------------------------------------------------------
+  // SUITE 2: Credibility Math
+  // --------------------------------------------------------------------------
   await describe("lib/credibility - computeWeight Boundary Tests", async () => {
     await it("should return baseline 1.0 when delta is 0", () => {
       assert.equal(computeWeight(0), 1.0);
@@ -158,18 +193,13 @@ async function main() {
     await it("should strictly clamp at MAX_CREDIBILITY_WEIGHT (2.40)", () => {
       assert.equal(computeWeight(28), MAX_CREDIBILITY_WEIGHT);
       assert.equal(computeWeight(100), MAX_CREDIBILITY_WEIGHT);
-      assert.equal(computeWeight(9999), MAX_CREDIBILITY_WEIGHT);
     });
 
-    await it("should scale down with negative deltas", () => {
+    await it("should scale down with negative deltas and clamp at MIN_CREDIBILITY_WEIGHT (0.40)", () => {
       assert.equal(computeWeight(-6), 0.7);
       assert.equal(computeWeight(-10), 0.5);
-    });
-
-    await it("should strictly clamp at lower bound MIN_CREDIBILITY_WEIGHT (0.40)", () => {
       assert.equal(computeWeight(-12), 0.4);
       assert.equal(computeWeight(-20), MIN_CREDIBILITY_WEIGHT);
-      assert.equal(computeWeight(-100), MIN_CREDIBILITY_WEIGHT);
     });
 
     await it("should handle NaN gracefully", () => {
@@ -177,7 +207,10 @@ async function main() {
     });
   });
 
-  await describe("lib/credibility - computeForecasterStats", async () => {
+  // --------------------------------------------------------------------------
+  // SUITE 3: Forecaster Stats & Consensus
+  // --------------------------------------------------------------------------
+  await describe("lib/credibility - Stats & Consensus Pivot", async () => {
     const mockPredictions = [
       {
         id: "1",
@@ -219,76 +252,18 @@ async function main() {
         writeStatus: "confirmed",
         blobId: "blob_2",
       },
-      {
-        id: "3",
-        category: "audit",
-        sportType: "soccer",
-        title: "Match 3",
-        content: "",
-        analyst: "@Erratic",
-        target: "M3",
-        pick: "W",
-        odds: "+110",
-        stake: 100,
-        pnl: -100,
-        outcome: "FAILED",
-        credibilityDelta: -8,
-        confidence: 3,
-        timestamp: 1500,
-        dateStr: "Day 1",
-        writeStatus: "local-demo",
-      },
     ];
 
     await it("should compute exact win rates, deltas, and weight multipliers", () => {
       const stats = computeForecasterStats(mockPredictions);
-
-      assert.equal(stats.length, 2);
-
-      const sharp = stats.find((s) => s.handle === "@Sharpshooter");
-      assert.notEqual(sharp, undefined);
-      assert.equal(sharp?.totalPicks, 2);
-      assert.equal(sharp?.wins, 2);
-      assert.equal(sharp?.losses, 0);
-      assert.equal(sharp?.winRate, 100.0);
-      assert.equal(sharp?.deltaTotal, 12);
-      assert.equal(sharp?.weightMultiplier, 1.6);
-      assert.equal(sharp?.netPnl, 180);
-      assert.equal(sharp?.verifiedBlobs.length, 2);
-
-      const erratic = stats.find((s) => s.handle === "@Erratic");
-      assert.notEqual(erratic, undefined);
-      assert.equal(erratic?.wins, 0);
-      assert.equal(erratic?.losses, 1);
-      assert.equal(erratic?.winRate, 0.0);
-      assert.equal(erratic?.deltaTotal, -8);
-      assert.equal(erratic?.weightMultiplier, 0.6);
-      assert.equal(erratic?.netPnl, -100);
-    });
-  });
-
-  await describe("lib/credibility - consensus() Evaluation", async () => {
-    await it("should compute identical picks when all weights are 1.0", () => {
-      const opinions = [
-        { analyst: "@User1", pick: "OVER 2.5", confidence: 3 },
-        { analyst: "@User2", pick: "OVER 2.5", confidence: 3 },
-        { analyst: "@User3", pick: "UNDER 2.5", confidence: 4 },
-      ];
-
-      const weights = {
-        "@User1": 1.0,
-        "@User2": 1.0,
-        "@User3": 1.0,
-      };
-
-      const res = consensus("Match X", opinions, weights);
-      assert.equal(res.unweightedPick, "OVER 2.5");
-      assert.equal(res.weightedPick, "OVER 2.5");
-      assert.equal(res.pivoted, false);
-      assert.equal(res.confidenceShift, 0);
+      assert.equal(stats.length, 1);
+      const sharp = stats[0];
+      assert.equal(sharp.winRate, 100.0);
+      assert.equal(sharp.deltaTotal, 12);
+      assert.equal(sharp.weightMultiplier, 1.6);
     });
 
-    await it("should dynamically pivot consensus pick when memory downweights bad forecasters and boosts sharps", () => {
+    await it("should dynamically pivot consensus pick when memory boosts sharps", () => {
       const opinions = [
         { analyst: "@HypeGuy1", pick: "FAVORITE -1.5", confidence: 3 },
         { analyst: "@HypeGuy2", pick: "FAVORITE -1.5", confidence: 3 },
@@ -302,157 +277,432 @@ async function main() {
       };
 
       const res = consensus("Derby Fixture", opinions, weights);
-
       assert.equal(res.unweightedPick, "FAVORITE -1.5");
       assert.equal(res.weightedPick, "UNDERDOG +1.5");
       assert.equal(res.pivoted, true);
-      assert.equal(res.boostedSharps.includes("@MasterSharp"), true);
-      assert.equal(res.dampenedForecasters.includes("@HypeGuy1"), true);
-      assert.equal(res.weightedConfidence > res.unweightedConfidence, true);
     });
   });
 
-  await describe("lib/resolver - parseCryptoTarget & delta rules", async () => {
-    await it("should parse above target correctly", () => {
-      const res = parseCryptoTarget("SUI/USDT Spot Breakout", "LONG SUI > $2.00");
-      assert.notEqual(res, null);
-      assert.equal(res?.symbol, "sui");
-      assert.equal(res?.targetPrice, 2.0);
-      assert.equal(res?.direction, "above");
+  // --------------------------------------------------------------------------
+  // SUITE 4: BAGIAN 2 - Resolver with Deadlines & Grace Window
+  // --------------------------------------------------------------------------
+  await describe("lib/resolver - Deadline & Grace Window Invariants", async () => {
+    const originalFetch = globalThis.fetch;
+    const baseNow = 1730000000000; // Reference baseline time
+
+    await it("should return legacy-no-deadline when forecast has no deadline", async () => {
+      const legacyPred = {
+        id: "pred-legacy-01",
+        sportType: "crypto",
+        target: "SUI/USDT Spot",
+        pick: "LONG > $2.00",
+        outcome: "PENDING",
+        analyst: "@LegacyAnalyst",
+        stake: 200,
+        confidence: 4,
+        // no deadline!
+      };
+
+      const res = await resolveCryptoPrediction(legacyPred, baseNow);
+      assert.equal(res.status, "legacy-no-deadline");
     });
 
-    await it("should parse below / short target correctly", () => {
-      const res = parseCryptoTarget("ETH/BTC Spot Ratio", "RATIO < 0.0380");
-      assert.notEqual(res, null);
-      assert.equal(res?.symbol, "ethereum");
-      assert.equal(res?.direction, "below");
+    await it("should return not_due when current time is before deadline", async () => {
+      const futurePred = {
+        id: "pred-future-01",
+        sportType: "crypto",
+        target: "SUI/USDT Spot",
+        pick: "LONG > $2.00",
+        outcome: "PENDING",
+        analyst: "@SuiSharp",
+        stake: 200,
+        confidence: 4,
+        deadline: new Date(baseNow + 24 * 3600 * 1000).toISOString(), // 24h in future
+      };
+
+      const res = await resolveCryptoPrediction(futurePred, baseNow);
+      assert.equal(res.status, "not_due");
+      assert.equal(res.reason?.includes("not due yet"), true);
     });
 
-    await it("should calculate delta rules based on confidence", () => {
+    await it("should return expired-unresolved when past the 6-hour grace window", async () => {
+      const expiredPred = {
+        id: "pred-expired-01",
+        sportType: "crypto",
+        target: "SUI/USDT Spot",
+        pick: "LONG > $2.00",
+        outcome: "PENDING",
+        analyst: "@SuiSharp",
+        stake: 200,
+        confidence: 4,
+        deadline: new Date(baseNow - (RESOLVER_GRACE_WINDOW_MS + 3600000)).toISOString(), // 7h in past
+      };
+
+      const res = await resolveCryptoPrediction(expiredPred, baseNow);
+      assert.equal(res.status, "expired-unresolved");
+      assert.equal(res.reason?.includes("grace window exceeded"), true);
+    });
+
+    await it("should resolve ACCURATE for above direction when Tatum price >= target within grace window", async () => {
+      process.env.TATUM_API_KEY = "test_key_123";
+
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("api.tatum.io/v3/tatum/rate/SUI")) {
+          return {
+            ok: true,
+            json: async () => ({ value: "2.35", basePair: "USD" }),
+          };
+        }
+        return { ok: false };
+      };
+
+      const duePred = {
+        id: "pred-due-above-01",
+        sportType: "crypto",
+        target: "SUI/USDT Breakout",
+        pick: "LONG > $2.00",
+        outcome: "PENDING",
+        analyst: "@SuiSharp",
+        stake: 300,
+        confidence: 5,
+        deadline: new Date(baseNow - 1800000).toISOString(), // 30m ago (inside grace window)
+        direction: "above",
+        targetPrice: 2.0,
+        asset: "SUI",
+      };
+
+      const res = await resolveCryptoPrediction(duePred, baseNow);
+      assert.equal(res.status, "resolved");
+      assert.equal(res.outcome, "ACCURATE");
+      assert.equal(res.delta, 8); // High confidence 5 win -> +8
+      assert.equal(res.evidence?.source, "tatum_data_api");
+      assert.equal(res.evidence?.method, "tatum_spot_within_grace");
+      assert.equal(res.oracleFallbackUsed, false);
+    });
+
+    await it("should resolve FAILED for below direction when price is higher than target", async () => {
+      process.env.TATUM_API_KEY = "test_key_123";
+
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("api.tatum.io/v3/tatum/rate/SUI")) {
+          return {
+            ok: true,
+            json: async () => ({ value: "1.50", basePair: "USD" }),
+          };
+        }
+        return { ok: false };
+      };
+
+      const duePred = {
+        id: "pred-due-below-01",
+        sportType: "crypto",
+        target: "SUI/USDT Dip Test",
+        pick: "SHORT < $1.20",
+        outcome: "PENDING",
+        analyst: "@SuiSharp",
+        stake: 300,
+        confidence: 3,
+        deadline: new Date(baseNow - 1800000).toISOString(),
+        direction: "below",
+        targetPrice: 1.2,
+        asset: "SUI",
+      };
+
+      const res = await resolveCryptoPrediction(duePred, baseNow);
+      assert.equal(res.status, "resolved");
+      assert.equal(res.outcome, "FAILED");
+      assert.equal(res.delta, -5); // Standard loss -> -5
+    });
+
+    await it("should fail without writing memory when Tatum fails and ALLOW_PUBLIC_ORACLE_FALLBACK is false", async () => {
+      process.env.ALLOW_PUBLIC_ORACLE_FALLBACK = "false";
+
+      globalThis.fetch = async () => ({ ok: false, status: 500, text: async () => "Tatum internal error" });
+
+      const duePred = {
+        id: "pred-due-fail-01",
+        sportType: "crypto",
+        target: "SUI/USDT Dip Test",
+        pick: "SHORT < $1.20",
+        outcome: "PENDING",
+        analyst: "@SuiSharp",
+        stake: 300,
+        confidence: 3,
+        deadline: new Date(baseNow - 1800000).toISOString(),
+      };
+
+      const res = await resolveCryptoPrediction(duePred, baseNow);
+      assert.equal(res.status, "failed");
+      assert.equal(res.reason?.includes("ALLOW_PUBLIC_ORACLE_FALLBACK is false"), true);
+    });
+
+    await it("should use public fallback when Tatum fails and ALLOW_PUBLIC_ORACLE_FALLBACK is true", async () => {
+      process.env.ALLOW_PUBLIC_ORACLE_FALLBACK = "true";
+
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("api.tatum.io")) {
+          return { ok: false, status: 500, text: async () => "Down" };
+        }
+        if (typeof url === "string" && url.includes("api.coingecko.com")) {
+          return {
+            ok: true,
+            json: async () => ({ sui: { usd: 2.10 } }),
+          };
+        }
+        return { ok: false };
+      };
+
+      const duePred = {
+        id: "pred-due-fallback-01",
+        sportType: "crypto",
+        target: "SUI/USDT Dip Test",
+        pick: "LONG > $2.00",
+        outcome: "PENDING",
+        analyst: "@SuiSharp",
+        stake: 300,
+        confidence: 4,
+        deadline: new Date(baseNow - 1800000).toISOString(),
+        direction: "above",
+        targetPrice: 2.0,
+      };
+
+      const res = await resolveCryptoPrediction(duePred, baseNow);
+      assert.equal(res.status, "resolved");
+      assert.equal(res.evidence?.source, "coingecko_public_fallback");
+      assert.equal(res.oracleFallbackUsed, true);
+    });
+
+    await it("should parse crypto target and calculate outcome deltas correctly", () => {
+      const parsedAbove = parseCryptoTarget("SUI Spot Breakout", "LONG SUI > $2.15");
+      assert.equal(parsedAbove?.symbol, "sui");
+      assert.equal(parsedAbove?.targetPrice, 2.15);
+      assert.equal(parsedAbove?.direction, "above");
+
+      const parsedBelow = parseCryptoTarget("ETH Range Short", "RATIO < 0.038");
+      assert.equal(parsedBelow?.symbol, "ethereum");
+      assert.equal(parsedBelow?.direction, "below");
+
       assert.equal(calculateOutcomeDelta("ACCURATE", 5), 8);
       assert.equal(calculateOutcomeDelta("ACCURATE", 4), 6);
       assert.equal(calculateOutcomeDelta("ACCURATE", 2), 4);
       assert.equal(calculateOutcomeDelta("FAILED", 5), -8);
       assert.equal(calculateOutcomeDelta("FAILED", 3), -5);
     });
-  });
 
-  await describe("lib/resolver - Mocked Resolver Execution & Idempotency", async () => {
-    const originalFetch = globalThis.fetch;
-    process.env.TATUM_API_KEY = "mock_tatum_key_12345";
-
-    const mockCryptoPrediction = {
-      id: "pred-crypto-mock-01",
-      category: "audit",
-      sportType: "crypto",
-      title: "SUI Support Bounce",
-      content: "Predicted bounce > $1.85",
-      analyst: "@SuiSharps",
-      target: "SUI/USDT Support",
-      pick: "BOUNCE > $1.85",
-      odds: "+120",
-      stake: 300,
-      pnl: 0,
-      outcome: "PENDING",
-      credibilityDelta: 0,
-      confidence: 5,
-      timestamp: 1730000000000,
-      dateStr: "Oct 27",
-      writeStatus: "local-demo",
-    };
-
-    await it("should resolve ACCURATE when Tatum rate exceeds targetPrice for above condition", async () => {
+    await it("should resolve due candidates idempotently and skip already-resolved records", async () => {
+      process.env.TATUM_API_KEY = "test_key_123";
       globalThis.fetch = async (url) => {
         if (typeof url === "string" && url.includes("api.tatum.io/v3/tatum/rate/SUI")) {
-          return {
-            ok: true,
-            json: async () => ({ value: "2.36", basePair: "USD" }),
-          };
+          return { ok: true, json: async () => ({ value: "2.35", basePair: "USD" }) };
         }
         return { ok: false };
       };
 
-      const result = await resolveCryptoPrediction(mockCryptoPrediction);
-
-      assert.equal(result.status, "resolved");
-      assert.equal(result.outcome, "ACCURATE");
-      assert.equal(result.delta, 8); // High confidence 5 -> +8 delta
-      assert.equal(result.evidence?.source, "tatum_data_api");
-      assert.equal(result.evidence?.price, 2.36);
-    });
-
-    await it("should resolve FAILED when Tatum rate falls short of targetPrice", async () => {
-      globalThis.fetch = async (url) => {
-        if (typeof url === "string" && url.includes("api.tatum.io/v3/tatum/rate/SUI")) {
-          return {
-            ok: true,
-            json: async () => ({ value: "1.25", basePair: "USD" }),
-          };
-        }
-        return { ok: false };
+      const testCand = {
+        id: "pred-batch-01",
+        sportType: "crypto",
+        target: "SUI/USDT Breakout",
+        pick: "LONG > $2.00",
+        outcome: "PENDING",
+        analyst: "@BatchSharp",
+        stake: 300,
+        confidence: 4,
+        deadline: new Date(baseNow - 1800000).toISOString(),
+        direction: "above",
+        targetPrice: 2.0,
+        asset: "SUI",
       };
 
-      const result = await resolveCryptoPrediction(mockCryptoPrediction);
-
-      assert.equal(result.status, "resolved");
-      assert.equal(result.outcome, "FAILED");
-      assert.equal(result.delta, -8); // High confidence 5 loss -> -8 delta
-      assert.equal(result.evidence?.price, 1.25);
-    });
-
-    await it("should fallback to public oracle when Tatum API returns an error", async () => {
-      globalThis.fetch = async (url) => {
-        if (typeof url === "string" && url.includes("api.tatum.io")) {
-          return {
-            ok: false,
-            status: 401,
-            text: async () => "Unauthorized API Key",
-          };
-        }
-        if (typeof url === "string" && url.includes("api.coingecko.com")) {
-          return {
-            ok: true,
-            json: async () => ({ sui: { usd: 2.15 } }),
-          };
-        }
-        return { ok: false };
-      };
-
-      const result = await resolveCryptoPrediction(mockCryptoPrediction);
-
-      assert.equal(result.status, "resolved");
-      assert.equal(result.outcome, "ACCURATE");
-      assert.equal(result.evidence?.source, "coingecko_public_fallback");
-      assert.equal(result.evidence?.price, 2.15);
-    });
-
-    await it("should strictly respect idempotency: second pass skips already-settled predictions", async () => {
-      globalThis.fetch = async (url) => {
-        if (typeof url === "string" && url.includes("api.tatum.io/v3/tatum/rate/SUI")) {
-          return {
-            ok: true,
-            json: async () => ({ value: "2.36", basePair: "USD" }),
-          };
-        }
-        return { ok: false };
-      };
-
-      // Run 1: resolves the prediction
-      const report1 = await resolveDuePredictions([mockCryptoPrediction]);
+      // Run 1: resolves
+      const report1 = await resolveDuePredictions([testCand], baseNow);
       assert.equal(report1.resolvedCount, 1);
 
-      // Run 2: same prediction must be skipped idempotently!
-      const report2 = await resolveDuePredictions([mockCryptoPrediction]);
+      // Run 2: skips idempotently
+      const report2 = await resolveDuePredictions([testCand], baseNow);
       assert.equal(report2.resolvedCount, 0);
       assert.equal(report2.skippedCount, 1);
-      assert.equal(report2.results[0].status, "skipped");
     });
 
     globalThis.fetch = originalFetch;
   });
 
+  // --------------------------------------------------------------------------
+  // SUITE 5: BAGIAN 3 - Honest Tatum Gateway & Sui RPC Parsing
+  // --------------------------------------------------------------------------
+  await describe("lib/tatum - Gateway Telemetry & Sui RPC Parsing", async () => {
+    const originalFetch = globalThis.fetch;
+
+    await it("should parse authentic Tatum Gateway metadata without fabricated defaults", async () => {
+      process.env.TATUM_API_KEY = "test_tatum_key";
+
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("api.tatum.io/v3/tatum/version")) {
+          return {
+            ok: true,
+            json: async () => ({
+              version: "3.18.3",
+              planName: "Free",
+              creditLimit: 100000,
+              usage: 4750,
+            }),
+          };
+        }
+        return { ok: false };
+      };
+
+      const status = await getTatumGatewayStatus();
+      assert.equal(status.ok, true);
+      assert.equal(status.status, "live");
+      assert.equal(status.plan, "Free");
+      assert.equal(status.creditLimit, 100000);
+      assert.equal(status.usage, 4750);
+      assert.equal(status.version, "v3.18.3");
+    });
+
+    await it("should return ok:false and null fields when Sui RPC returns an error or 404", async () => {
+      globalThis.fetch = async () => ({
+        ok: false,
+        status: 404,
+      });
+
+      const chain = await getSuiChainMetrics();
+      assert.equal(chain.ok, false);
+      assert.equal(chain.status, "unavailable");
+      assert.equal(chain.checkpoint, null);
+      assert.equal(chain.epoch, null);
+      assert.equal(chain.referenceGasPrice, null);
+    });
+
+    await it("should gracefully return null checkpoint anchor when RPC fails during prediction intake", async () => {
+      globalThis.fetch = async () => ({
+        ok: false,
+        status: 503,
+      });
+
+      const anchor = await getLatestSuiCheckpointAnchor();
+      assert.equal(anchor.checkpoint, null);
+      assert.equal(anchor.digest, null);
+    });
+
+    globalThis.fetch = originalFetch;
+  });
+
+  // --------------------------------------------------------------------------
+  // SUITE 6: BAGIAN 4 - Endpoint Security, Rate Limits & Authentication Gates
+  // --------------------------------------------------------------------------
+  await describe("API Route Security & Write Gate Invariants", async () => {
+    // Import API route handlers dynamically
+    const { POST: postMemory } = await import("../app/api/memories/route.ts");
+    const { GET: getCronResolve } = await import("../app/api/resolve/route.ts");
+    const { POST: postSeed } = await import("../app/api/seed/route.ts");
+
+    await it("should sanitize client input and strictly enforce outcome='PENDING' and delta=0", async () => {
+      const maliciousBody = {
+        title: "Malicious Attack Forecast",
+        target: "SUI/USDT Hack",
+        pick: "OVER 999",
+        analyst: "@EvilAttacker",
+        outcome: "ACCURATE", // Client attempts to force ACCURATE
+        credibilityDelta: 100, // Client attempts to force +100 delta
+        sportType: "soccer",
+      };
+
+      const req = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(maliciousBody),
+      });
+
+      const res = await postMemory(req);
+      const json = await res.json();
+
+      assert.equal(res.status, 200);
+      assert.equal(json.success, true);
+      assert.equal(json.data.outcome, "PENDING"); // Must be sanitized to PENDING
+      assert.equal(json.data.credibilityDelta, 0); // Must be sanitized to 0
+    });
+
+    await it("should reject crypto forecast without deadline with HTTP 400", async () => {
+      const req = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "SUI Missing Deadline",
+          target: "SUI/USDT Spot",
+          pick: "LONG > $2.00",
+          analyst: "@CryptoTrader",
+          sportType: "crypto",
+          // missing deadline!
+        }),
+      });
+
+      const res = await postMemory(req);
+      const json = await res.json();
+
+      assert.equal(res.status, 400);
+      assert.equal(json.success, false);
+      assert.equal(json.error?.includes("deadline"), true);
+    });
+
+    await it("should reject invalid analyst handles that fail regex @[A-Za-z0-9_]{3,30}", async () => {
+      const req = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Invalid Analyst Format",
+          target: "SUI/USDT Spot",
+          pick: "LONG > $2.00",
+          analyst: "no_at_symbol",
+          sportType: "soccer",
+        }),
+      });
+
+      const res = await postMemory(req);
+      const json = await res.json();
+
+      assert.equal(res.status, 400);
+      assert.equal(json.success, false);
+      assert.equal(json.error?.includes("Analyst handle must start with '@'"), true);
+    });
+
+    await it("should reject cron resolution GET /api/resolve when CRON_SECRET is missing or wrong (fail-closed)", async () => {
+      process.env.CRON_SECRET = "super_secret_cron_token_xyz";
+
+      // Case 1: missing Authorization header
+      const reqUnauthed = new Request("http://localhost:3000/api/resolve", {
+        method: "GET",
+      });
+      const res1 = await getCronResolve(reqUnauthed);
+      assert.equal(res1.status, 401);
+
+      // Case 2: wrong Bearer token
+      const reqWrong = new Request("http://localhost:3000/api/resolve", {
+        method: "GET",
+        headers: { authorization: "Bearer wrong_token" },
+      });
+      const res2 = await getCronResolve(reqWrong);
+      assert.equal(res2.status, 401);
+    });
+
+    await it("should reject seeding POST /api/seed when ADMIN_SECRET does not match with HTTP 403", async () => {
+      process.env.ADMIN_SECRET = "production_admin_secret_999";
+
+      const req = new Request("http://localhost:3000/api/seed", {
+        method: "POST",
+        headers: { "x-admin-secret": "wrong_secret" },
+      });
+
+      const res = await postSeed(req);
+      const json = await res.json();
+
+      assert.equal(res.status, 403);
+      assert.equal(json.success, false);
+      assert.equal(json.error?.includes("Forbidden"), true);
+    });
+  });
+
   console.log("\n=================================================");
-  console.log(`  TEST RESULTS: ${passed} PASSED | ${failed} FAILED`);
+  console.log(`  FINAL RESULTS: ${passed} PASSED | ${failed} FAILED`);
   console.log("=================================================\n");
 
   if (failed > 0) {

@@ -1,13 +1,30 @@
 import { NextResponse } from "next/server";
-import { getSuiMetrics } from "@/lib/tatum";
-
+import { getTatumGatewayStatus, getSuiChainMetrics } from "@/lib/tatum";
 
 export async function GET() {
   try {
-    const metrics = await getSuiMetrics();
+    const [tatumStatus, suiStatus] = await Promise.all([
+      getTatumGatewayStatus(),
+      getSuiChainMetrics(),
+    ]);
+
     return NextResponse.json({
       success: true,
-      data: metrics,
+      data: {
+        tatum: tatumStatus,
+        sui: suiStatus,
+        // Backward-compatible fields
+        ok: tatumStatus.ok,
+        status: tatumStatus.status,
+        plan: tatumStatus.plan,
+        creditLimit: tatumStatus.creditLimit,
+        latencyMs: tatumStatus.latencyMs,
+        checkpoint: suiStatus.checkpoint,
+        epoch: suiStatus.epoch,
+        referenceGasPrice: suiStatus.referenceGasPrice,
+        chainId: suiStatus.chainId,
+        isTatumGateway: tatumStatus.ok,
+      },
       timestamp: Date.now(),
     });
   } catch (err: unknown) {
