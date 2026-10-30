@@ -8,27 +8,29 @@ interface CalendarHeatmapCardProps {
 }
 
 export function CalendarHeatmapCard({ daysCount = 35 }: CalendarHeatmapCardProps) {
-  // Generate last 35 days with realistic outcomes
-  const days = Array.from({ length: daysCount }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (daysCount - 1 - i));
-    const dayOfWeek = d.getDay(); // 0 is Sunday, 6 is Saturday
-    const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // Deterministic fixed day offset to avoid unstable new Date() prerender error
+  const days = React.useMemo(() => {
+    // Anchor to fixed reference day
+    const baseTime = 1730304000000; // Oct 30, 2026
+    return Array.from({ length: daysCount }).map((_, i) => {
+      const d = new Date(baseTime - (daysCount - 1 - i) * 86400000);
+      const dayOfWeek = d.getDay();
+      const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-    // deterministic realistic performance: most weekend/match days have wins or losses
-    let status: "win" | "loss" | "flat" = "flat";
-    let pnl = 0;
+      let status: "win" | "loss" | "flat" = "flat";
+      let pnl = 0;
 
-    if (i % 3 === 0 || i % 7 === 1) {
-      status = "win";
-      pnl = 180 + (i % 5) * 60;
-    } else if (i % 5 === 2) {
-      status = "loss";
-      pnl = -120 - (i % 3) * 50;
-    }
+      if (i % 3 === 0 || i % 7 === 1) {
+        status = "win";
+        pnl = 180 + (i % 5) * 60;
+      } else if (i % 5 === 2) {
+        status = "loss";
+        pnl = -120 - (i % 3) * 50;
+      }
 
-    return { dateStr, status, pnl, dayOfWeek };
-  });
+      return { dateStr, status, pnl, dayOfWeek };
+    });
+  }, [daysCount]);
 
   return (
     <BentoCard colSpan="col-span-12" delay={0.4} className="flex flex-col justify-between">
