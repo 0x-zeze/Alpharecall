@@ -26,18 +26,18 @@ export function BestWorstPickCard({ bestPick, worstPick }: BestWorstPickCardProp
               <TrendingUp className="w-3.5 h-3.5" />
               Highest Gain
             </span>
-            <span className="font-bold text-[var(--win)]">+$580 PnL</span>
+            <span className="font-bold text-[var(--win)]">+$560 PnL</span>
           </div>
 
           <div>
             <h4 className="text-xs font-bold text-[var(--text)]">SUI/USDT Breakout &gt; $2.00</h4>
             <p className="text-[11px] text-[var(--muted)] line-clamp-2 mt-0.5">
-              Logged 48h prior to 18% DEX expansion. Confirmed peak at $2.36.
+              Logged 48h prior to onchain TVL passing $1B. Realized peak at $2.365.
             </p>
           </div>
 
           <div className="text-[10px] font-mono-num text-[var(--muted)] pt-1 flex justify-between border-t border-[var(--win)]/15">
-            <span>By @CryptoSuiAlpha</span>
+            <span>By @SuiEcosystemAlpha</span>
             <span className="text-[var(--win)] font-semibold">+8 Credibility</span>
           </div>
         </div>
@@ -53,15 +53,15 @@ export function BestWorstPickCard({ bestPick, worstPick }: BestWorstPickCardProp
           </div>
 
           <div>
-            <h4 className="text-xs font-bold text-[var(--text)]">Arsenal vs Liverpool Under 2.5</h4>
+            <h4 className="text-xs font-bold text-[var(--text)]">West Ham 2 - 1 Man United</h4>
             <p className="text-[11px] text-[var(--muted)] line-clamp-2 mt-0.5">
-              Set-piece defensive collapses produced 4 goals (2-2 draw).
+              Bowen 92' penalty sealed loss over Casemiro's 81st-minute goal.
             </p>
           </div>
 
           <div className="text-[10px] font-mono-num text-[var(--muted)] pt-1 flex justify-between border-t border-[var(--loss)]/15">
-            <span>By @EPLFootyPicks</span>
-            <span className="text-[var(--loss)] font-semibold">-5 Credibility</span>
+            <span>By @EPLForecasterBeta</span>
+            <span className="text-[var(--loss)] font-semibold">-6 Credibility</span>
           </div>
         </div>
       </div>
