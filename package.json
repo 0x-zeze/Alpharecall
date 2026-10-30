@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "seed": "node scripts/seed-mainnet.mjs",
+    "keygen": "node scripts/generate-delegate-key.mjs",
     "test": "node --no-warnings --experimental-strip-types --loader ./scripts/ts-loader.mjs scripts/run-tests.mjs",
     "lint": "eslint"
   },
