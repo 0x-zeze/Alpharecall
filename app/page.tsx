@@ -186,6 +186,7 @@ export default function AlphaRecallApp() {
             <JournalView
               predictions={predictions}
               onAddPrediction={handleAddPrediction}
+              onRefresh={fetchData}
             />
           )}
 

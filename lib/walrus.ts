@@ -1,5 +1,5 @@
 import { MemWal } from "@mysten-incubation/memwal";
-import { PredictionRecord } from "./types";
+import type { PredictionRecord } from "./types";
 import { DEMO_PREDICTIONS } from "./demo-data";
 import {
   encodeMemory,

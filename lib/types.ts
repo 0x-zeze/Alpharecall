@@ -60,6 +60,7 @@ export interface BankrollStats {
 }
 
 export interface SuiNodeStatus {
+  ok: boolean;
   status: "live" | "unavailable";
   checkpoint: string | null;
   epoch: string | null;

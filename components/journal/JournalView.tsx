@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Tag,
   Star,
+  RefreshCw,
 } from "lucide-react";
 import { PredictionRecord, PredictionCategory, PredictionStatus } from "@/lib/types";
 import { AddPredictionSlideOver } from "./AddPredictionSlideOver";
@@ -31,14 +32,39 @@ interface JournalViewProps {
     confidence: number;
     reasoning: string;
   }) => Promise<void>;
+  onRefresh?: () => Promise<void> | void;
 }
 
-export function JournalView({ predictions, onAddPrediction }: JournalViewProps) {
+export function JournalView({ predictions, onAddPrediction, onRefresh }: JournalViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | PredictionCategory>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | PredictionStatus>("all");
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+  const [resolveFeedback, setResolveFeedback] = useState<string | null>(null);
+
+  const handleCheckResultsNow = async () => {
+    setIsResolving(true);
+    setResolveFeedback(null);
+    try {
+      const res = await fetch("/api/resolve", { method: "POST" });
+      const data = await res.json();
+      if (data?.success) {
+        setResolveFeedback(
+          `Evaluated ${data.totalEvaluated}: ${data.resolvedCount} resolved, ${data.skippedCount} already settled.`
+        );
+        if (onRefresh) await onRefresh();
+      } else {
+        setResolveFeedback(`Resolution error: ${data?.error || "Unknown"}`);
+      }
+    } catch (err: unknown) {
+      setResolveFeedback(err instanceof Error ? err.message : "Network error");
+    } finally {
+      setIsResolving(false);
+      setTimeout(() => setResolveFeedback(null), 6000);
+    }
+  };
 
   // Filtered dataset
   const filteredPredictions = useMemo(() => {
@@ -101,6 +127,16 @@ export function JournalView({ predictions, onAddPrediction }: JournalViewProps) 
             <option value="PENDING">Pending (Open)</option>
           </select>
 
+          {/* Check Results Now CTA */}
+          <button
+            onClick={handleCheckResultsNow}
+            disabled={isResolving}
+            className="flex items-center gap-1.5 py-2 px-3 rounded-[8px] bg-[var(--card)] border border-[var(--border)] text-[var(--text)] font-mono-num font-semibold text-xs hover:border-[var(--accent)] hover:text-[var(--accent)] transition shrink-0 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isResolving ? "animate-spin text-[var(--accent)]" : ""}`} />
+            <span>{isResolving ? "Resolving..." : "Check results now"}</span>
+          </button>
+
           {/* Log New Prediction CTA */}
           <button
             onClick={() => setIsSlideOverOpen(true)}
@@ -110,6 +146,13 @@ export function JournalView({ predictions, onAddPrediction }: JournalViewProps) 
             <span>Add Prediction</span>
           </button>
         </div>
+
+        {resolveFeedback && (
+          <div className="mt-3 p-2.5 rounded-[8px] bg-[var(--card)] border border-[var(--accent)]/30 text-xs font-mono-num text-[var(--accent)] flex items-center justify-between">
+            <span>{resolveFeedback}</span>
+            <button onClick={() => setResolveFeedback(null)} className="text-[var(--muted)] hover:text-[var(--text)]">✕</button>
+          </div>
+        )}
       </div>
 
       {/* Table Container */}
@@ -275,6 +318,22 @@ export function JournalView({ predictions, onAddPrediction }: JournalViewProps) 
                                         : pred.credibilityDelta}
                                     </span>
                                   </div>
+
+                                  {/* Settlement Type & Oracle Classification */}
+                                  {pred.outcome === "PENDING" && (
+                                    <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
+                                      <span className="text-[10px] text-[var(--muted)] uppercase font-semibold">Oracle Pipeline</span>
+                                      {pred.sportType === "crypto" ? (
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold text-[var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/30">
+                                          Tatum Data API / Price Oracle
+                                        </span>
+                                      ) : (
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold text-amber-500 bg-amber-500/10 border border-amber-500/30">
+                                          Manual Resolution (Sports Feed)
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
 
                                   {/* Honest On-Chain State / Walrus Verification Link */}
                                   {pred.writeStatus === "confirmed" && pred.blobId ? (

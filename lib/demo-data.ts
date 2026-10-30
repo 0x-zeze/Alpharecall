@@ -1,4 +1,4 @@
-import { PredictionRecord } from "./types";
+import type { PredictionRecord } from "./types";
 
 /**
  * Canonical Demo Dataset for AlphaRecall.
