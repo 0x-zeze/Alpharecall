@@ -1,0 +1,5 @@
+minimumReleaseAgeExclude:
+  - '@mysten-incubation/memwal@0.1.12'
+  - framer-motion@14.8.0
+  - lucide-react@1.65.0
+  - motion-dom@14.8.0

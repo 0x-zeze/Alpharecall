@@ -2,7 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  serverExternalPackages: ["@mysten-incubation/memwal"],
+  serverExternalPackages: [
+    "@mysten-incubation/memwal",
+    "@mysten/seal",
+    "@mysten/sui",
+  ],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

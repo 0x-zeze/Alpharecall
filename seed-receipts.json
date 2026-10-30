@@ -126,5 +126,149 @@
     "writeStatus": "local-demo",
     "timestamp": "2026-10-30T13:55:25.065Z",
     "textPreview": "Predicted SUI bounce confirmation above $1.85 with institutional TVL support."
+  },
+  {
+    "predictionId": "rec-01",
+    "title": "El Clasico: Real Madrid 0 - 4 FC Barcelona",
+    "blobId": "MDppsKhZlP6LG3FgAOKkiwd-Zs00vZxCNSBD6OkJPZo",
+    "jobId": "4fed30a6-72ac-45a3-a9fc-fb27a6c08f38",
+    "timestamp": "2026-10-30T14:54:23.656Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/MDppsKhZlP6LG3FgAOKkiwd-Zs00vZxCNSBD6OkJPZo",
+    "textPreview": "Predicted FC Barcelona Draw No Bet (+125). Confirmed: Barcelona routed Real Madrid 4-0 at Santiago B"
+  },
+  {
+    "predictionId": "rec-02",
+    "title": "Premier League: Arsenal 2 - 2 Liverpool Over 2.5 Goals",
+    "blobId": "Pvl2qLR-MtlscsT6Xefn1hMa6pKDxgAHUEdUsixPaVE",
+    "jobId": "38757923-74c4-4d09-b882-a21438cadb0e",
+    "timestamp": "2026-10-30T14:54:24.411Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/Pvl2qLR-MtlscsT6Xefn1hMa6pKDxgAHUEdUsixPaVE",
+    "textPreview": "Predicted Over 2.5 Total Match Goals (-108). Confirmed: 4 total goals at Emirates Stadium (Bukayo Sa"
+  },
+  {
+    "predictionId": "rec-03",
+    "title": "UEFA Champions League: Real Madrid 5 - 2 Borussia Dortmund",
+    "blobId": "MlY3RrUcDu9yZqt4azuEqjNU_CAAdkQ1J6-rQSPbU8k",
+    "jobId": "10507cfb-e016-4e36-be02-42c823c7574a",
+    "timestamp": "2026-10-30T14:54:24.823Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/MlY3RrUcDu9yZqt4azuEqjNU_CAAdkQ1J6-rQSPbU8k",
+    "textPreview": "Predicted Real Madrid 2nd-Half Over 1.5 Team Goals (-120). Confirmed: Trailing 0-2 at halftime, Madr"
+  },
+  {
+    "predictionId": "rec-04",
+    "title": "UEFA Champions League: FC Barcelona 4 - 1 Bayern Munich",
+    "blobId": "IId5yX8mnya--n6K7fsU_eULIa3GBhJUzSgJ1-F1WO0",
+    "jobId": "3d6eacd6-0ad2-49c4-abaa-1f4934cb8bab",
+    "timestamp": "2026-10-30T14:54:25.243Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/IId5yX8mnya--n6K7fsU_eULIa3GBhJUzSgJ1-F1WO0",
+    "textPreview": "Predicted Barcelona Moneyline (+140). Confirmed: Barcelona ended 6-match losing streak to Bayern wit"
+  },
+  {
+    "predictionId": "rec-05",
+    "title": "NBA: Boston Celtics 119 - 108 Milwaukee Bucks (-9.5 Spread)",
+    "blobId": "EGTVpuhtIybSbbkAH4YW07k2EC7V0BAxnvxk2-EBXPo",
+    "jobId": "c8f46654-1d44-4c47-87b3-340eaab752a5",
+    "timestamp": "2026-10-30T14:54:25.647Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/EGTVpuhtIybSbbkAH4YW07k2EC7V0BAxnvxk2-EBXPo",
+    "textPreview": "Predicted Boston Celtics -9.5 (-110). Confirmed: Celtics covered with an 11-point victory (119-108) "
+  },
+  {
+    "predictionId": "rec-06",
+    "title": "NBA: Nikola Jokic Over 26.5 Points (Nuggets vs Raptors)",
+    "blobId": "_qRNwZHJxnGQGFIYTqNWJB6fmzUAqJTAhjv0_asDHNM",
+    "jobId": "945723e7-3b26-4735-9a87-6961c63fdeca",
+    "timestamp": "2026-10-30T14:54:26.091Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/_qRNwZHJxnGQGFIYTqNWJB6fmzUAqJTAhjv0_asDHNM",
+    "textPreview": "Predicted Nikola Jokic Over 26.5 Points (-115). Confirmed: Jokic exploded for 40 points, 10 rebounds"
+  },
+  {
+    "predictionId": "rec-07",
+    "title": "Premier League: West Ham 2 - 1 Manchester United",
+    "blobId": "BY17qQqMED4GWhhO8bOIs9qN_NErjaRIL5xTyQ1V0CI",
+    "jobId": "eebbc7e6-890c-42df-8873-6b55fccc9741",
+    "timestamp": "2026-10-30T14:54:26.519Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/BY17qQqMED4GWhhO8bOIs9qN_NErjaRIL5xTyQ1V0CI",
+    "textPreview": "Predicted Manchester United Moneyline (+115). Failed: Manchester United lost 1-2 at London Stadium. "
+  },
+  {
+    "predictionId": "rec-08",
+    "title": "Sui Ecosystem: SUI Spot Resistance Breakout > $2.00",
+    "blobId": "vLRIaRkHJBz6mAcv0FB5gwdtYxa-n59y4Lk8ANBGXRY",
+    "jobId": "889b5137-7b9f-4e5b-9a15-7836079095eb",
+    "timestamp": "2026-10-30T14:54:26.916Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/vLRIaRkHJBz6mAcv0FB5gwdtYxa-n59y4Lk8ANBGXRY",
+    "textPreview": "Predicted SUI breakout above $2.00 (+140). Confirmed: SUI price broke out from $1.86 to a peak of $2"
+  },
+  {
+    "predictionId": "rec-09",
+    "title": "Bitcoin Macro: BTC Spot Liquidity Sweep to $69,450",
+    "blobId": "9pWbhl1oxTgTqOiZnA-cQGcc-jXI9T1tId-Jc8bYY0M",
+    "jobId": "cecc32cb-50b5-4b61-ad12-a86b4a8a09ef",
+    "timestamp": "2026-10-30T14:54:27.322Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/9pWbhl1oxTgTqOiZnA-cQGcc-jXI9T1tId-Jc8bYY0M",
+    "textPreview": "Predicted BTC test of $69,000 range high (+115). Confirmed: Bitcoin tapped $69,519 resistance on Bit"
+  },
+  {
+    "predictionId": "rec-10",
+    "title": "NBA: Los Angeles Lakers 131 - 127 Sacramento Kings",
+    "blobId": "325ARz4CvVbreH7ARCsuZly3RU5ze2638iDj19WCsCU",
+    "jobId": "63b7edb0-23ad-4f59-bfe0-8d39d2ebfd47",
+    "timestamp": "2026-10-30T14:54:50.985Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/325ARz4CvVbreH7ARCsuZly3RU5ze2638iDj19WCsCU",
+    "textPreview": "Predicted Lakers Moneyline (-125). Confirmed: Lakers won 131-127 at Crypto.com Arena behind LeBron J"
+  },
+  {
+    "predictionId": "rec-11",
+    "title": "Ethereum Macro: ETH/BTC Ratio Breakdown Under 0.038",
+    "blobId": "jDG2GmeXgQ5pk_eTfDKTWLwBqEGHbf8y2Fq_pDDzCAk",
+    "jobId": "5d9423bd-983f-40b6-8a64-c45920a1ecce",
+    "timestamp": "2026-10-30T14:55:15.367Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/jDG2GmeXgQ5pk_eTfDKTWLwBqEGHbf8y2Fq_pDDzCAk",
+    "textPreview": "Predicted ETH/BTC ratio decline under 0.0380 (+110). Confirmed: Ratio broke multi-year support, fall"
+  },
+  {
+    "predictionId": "rec-12",
+    "title": "Premier League: Chelsea 2 - 1 Newcastle United",
+    "blobId": "_cR7biDzHiTXYmAytnbnVMFmH5DZ64GTnbs6lioLGVw",
+    "jobId": "cd34990d-c815-4ee7-8d64-8da72d48b6b5",
+    "timestamp": "2026-10-30T14:55:38.326Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/_cR7biDzHiTXYmAytnbnVMFmH5DZ64GTnbs6lioLGVw",
+    "textPreview": "Predicted Chelsea Moneyline (-115). Confirmed: Chelsea won 2-1 at Stamford Bridge. Nicolas Jackson o"
+  },
+  {
+    "predictionId": "rec-13",
+    "title": "UEFA Champions League: Real Madrid vs AC Milan",
+    "blobId": "TDVgtJ4dxhJhJOb6p2o18tt0vkH4zGzELh4wELA8v3Y",
+    "jobId": "fc5a7f43-0a53-4028-bcb5-10f40a408618",
+    "timestamp": "2026-10-30T14:56:02.927Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/TDVgtJ4dxhJhJOb6p2o18tt0vkH4zGzELh4wELA8v3Y",
+    "textPreview": "Predicted Real Madrid Moneyline & Over 2.5 Goals at Santiago Bernabeu."
+  },
+  {
+    "predictionId": "rec-14",
+    "title": "UEFA Champions League: Inter Milan vs Arsenal",
+    "blobId": "0LM0vnhkdqCqQDYSHVzbqeH94VvDy3f1C40a6AfCBPE",
+    "jobId": "a2c3f76e-b3dd-4a58-94df-2f7f67ffe41c",
+    "timestamp": "2026-10-30T14:56:25.778Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/0LM0vnhkdqCqQDYSHVzbqeH94VvDy3f1C40a6AfCBPE",
+    "textPreview": "Predicted Under 2.5 Total Match Goals at San Siro."
+  },
+  {
+    "predictionId": "rec-15",
+    "title": "NBA: Boston Celtics vs Golden State Warriors Over 228.5",
+    "blobId": "7oV_zeh_81qAaAJ1n7kuNES1w2nQDBnSxBh7kZPkCcA",
+    "jobId": "01f40c8e-952c-4935-9d9e-3643f7d7d345",
+    "timestamp": "2026-10-30T14:56:45.474Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/7oV_zeh_81qAaAJ1n7kuNES1w2nQDBnSxBh7kZPkCcA",
+    "textPreview": "Predicted Over 228.5 Total Points at TD Garden."
+  },
+  {
+    "predictionId": "rec-16",
+    "title": "Sui Ecosystem: SUI Spot Re-accumulation Test > $1.85",
+    "blobId": "ZFuFsoI9iHgQGvn_gwkZag7XhGYmMxPN5kG3dE50sSA",
+    "jobId": "c96ac19f-fce2-4a3a-85ce-72fe2c1c463b",
+    "timestamp": "2026-10-30T14:57:10.060Z",
+    "explorerUrl": "https://walruscan.com/mainnet/blob/ZFuFsoI9iHgQGvn_gwkZag7XhGYmMxPN5kG3dE50sSA",
+    "textPreview": "Predicted SUI bounce confirmation above $1.85 with institutional TVL support."
   }
 ]

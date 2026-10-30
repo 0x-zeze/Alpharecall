@@ -6,13 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed": "node scripts/seed-mainnet.mjs",
+    "seed": "node --env-file=.env.local scripts/seed-mainnet.mjs",
     "keygen": "node scripts/generate-delegate-key.mjs",
     "test": "node --no-warnings --experimental-strip-types --loader ./scripts/ts-loader.mjs scripts/run-tests.mjs",
     "lint": "eslint"
   },
   "dependencies": {
     "@mysten-incubation/memwal": "^0.1.12",
+    "@mysten/seal": "^1.5.2",
+    "@mysten/sui": "^2.38.0",
     "@tatumio/tatum": "^4.2.60",
     "clsx": "^2.1.1",
     "framer-motion": "^14.8.0",

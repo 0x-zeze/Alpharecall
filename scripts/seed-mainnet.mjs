@@ -71,10 +71,24 @@ async function main() {
   await memwal.health();
   console.log("[✓] Relayer is ONLINE and healthy.\n");
 
-  const receipts = [];
+  const receiptsPath = path.join(__dirname, "../seed-receipts.json");
+  let receipts = [];
+  if (fs.existsSync(receiptsPath)) {
+    try {
+      receipts = JSON.parse(fs.readFileSync(receiptsPath, "utf8"));
+    } catch {
+      receipts = [];
+    }
+  }
 
   for (let i = 0; i < CANONICAL_SEEDS.length; i++) {
     const item = CANONICAL_SEEDS[i];
+    const existing = receipts.find((r) => r.predictionId === item.id && r.blobId);
+    if (existing) {
+      console.log(`[${i + 1}/${CANONICAL_SEEDS.length}] Already on-chain: "${item.title}" -> ${existing.blobId}`);
+      continue;
+    }
+
     console.log(`[${i + 1}/${CANONICAL_SEEDS.length}] Committing: "${item.title}"`);
     
     // Store full structured ALPHARECALL_V1 memory payload
@@ -118,11 +132,9 @@ async function main() {
       explorerUrl: `https://walruscan.com/mainnet/blob/${blobId}`,
       textPreview: item.content.slice(0, 100),
     });
-  }
 
-  // Save authentic receipts to seed-receipts.json
-  const receiptsPath = path.join(__dirname, "../seed-receipts.json");
-  fs.writeFileSync(receiptsPath, JSON.stringify(receipts, null, 2), "utf8");
+    fs.writeFileSync(receiptsPath, JSON.stringify(receipts, null, 2), "utf8");
+  }
 
   console.log("\n========================================================");
   console.log(`  [SUCCESS] All ${receipts.length} memories verified and written to Walrus Mainnet!`);
