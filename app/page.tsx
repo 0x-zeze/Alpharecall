@@ -571,7 +571,7 @@ export default function AlphaRecallDashboard() {
                 <div className="p-4 rounded-xl bg-black/40 border border-[#2cc59a]/30 space-y-2">
                   <span className="text-[#2cc59a] font-bold uppercase tracking-wider font-mono">With Walrus Memory (AlphaRecall)</span>
                   <p className="text-white/80">
-                    Recalls 3 past failed goal predictions by @EPLFootyPicks, automatically downgrading their confidence to 0.6x, while boosting @DodgerBlueStats to 2.4x. The consensus is mathematically refined.
+                    Recalls 3 past failed goal predictions by @EPLFootyPicks, automatically downgrading their confidence to 0.6x, while boosting @TacticalFootyIQ and @CourtVisionNBA to 2.2x. The consensus is mathematically refined.
                   </p>
                 </div>
               </div>
@@ -673,7 +673,7 @@ export default function AlphaRecallDashboard() {
                         : "border-white/10 text-white/50"
                     }`}
                   >
-                    Sports (MLB / EPL / NBA)
+                    Sports (Soccer / NBA / UCL)
                   </button>
                   <button
                     type="button"
@@ -693,7 +693,7 @@ export default function AlphaRecallDashboard() {
                 <label className="block text-white/60 mb-1 font-mono uppercase">Target Event or Asset</label>
                 <input
                   type="text"
-                  placeholder="e.g. SUI/USDT Breakout or Dodgers vs Yankees"
+                  placeholder="e.g. SUI/USDT Breakout, Real Madrid vs Milan, or Celtics vs Knicks"
                   value={newTarget}
                   onChange={(e) => setNewTarget(e.target.value)}
                   required

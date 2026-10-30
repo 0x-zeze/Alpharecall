@@ -15,7 +15,7 @@ Standard prediction markets and betting trackers suffer from a critical flaw: **
 By combining **Tatum Sui RPC & Data APIs** for live onchain verification with **Walrus Memory on Mainnet** (`@mysten-incubation/memwal`), AlphaRecall records every forecast, audits its resolution, and immutably recalibrates forecaster credibility scores across sessions. 
 
 The result is a prediction engine that **actually gets sharper over time**:
-- **Sessions 1–5:** Logs predictions across MLB, EPL, NBA, and SUI/crypto breakouts.
+- **Sessions 1–5:** Logs predictions across Soccer (EPL, UCL, La Liga), NBA, and SUI/crypto breakouts.
 - **Resolution Phase:** Validates game outcomes and onchain price peaks.
 - **The Memory Loop:** Queries Walrus Memory using semantic recall (`recall()`), automatically downweighting erratic analysts and elevating verified sharps.
 
@@ -107,7 +107,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the live dashboard.
    - Future queries call `memwal.recall({ query: "forecaster credibility history" })`.
    - The consensus formula adjusts dynamically:
      $$\text{Weight} = \max\left(0.4, 1.0 + \frac{\Delta_{\text{total}}}{20}\right)$$
-   - Proven forecasters (like `@DodgerBlueStats`) receive up to **2.4x weighting**, while uncalibrated accounts are dampened to **0.6x**.
+   - Proven forecasters (like `@TacticalFootyIQ` or `@CourtVisionNBA`) receive up to **2.2x weighting**, while uncalibrated accounts are dampened to **0.6x**.
 
 ---
 

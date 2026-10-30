@@ -24,16 +24,16 @@ if (!key || !accountId) {
 }
 
 const SEED_DATA = [
-  "MLB LAD vs NYY: Dodger Moneyline verified. Freddie Freeman grand slam in 10th inning. Analyst @DodgerBlueStats credibility score boosted to 94.",
+  "UCL RMA vs MIL: Over 2.5 Total Match Goals verified. 4 total match goals scored. Analyst @TacticalFootyIQ credibility score boosted to 94.",
   "SUI/USDT Oracle Audit: Breakout above $2.20 confirmed via Tatum Sui RPC. Volume 480M. Analyst @CryptoSuiAlpha accuracy +8.",
   "Premier League ARS vs CHE: Over 2.5 goals verified. Match finished 2-1. Analyst @EPLFootyPicks updated.",
   "Sui TVL Metric: Crossed $1,000,000,000 benchmark. Onchain verification confirmed on Sui Mainnet via Tatum RPC gateway.",
   "NBA BOS vs MIA: Boston -6.5 spread covered smoothly (119-105). Forecaster @HoopSharps credibility increased by 5 points.",
   "BTC/USDT Macro Test: Re-tested $68,500 resistance zone. Predicted liquidity sweep executed accurately by @MacroCryptoSage.",
-  "MLB NLCS Game 6: Dodgers vs Mets Over 8.5 cleared by 5th inning. 15 total runs scored. High bullpen variance model verified.",
+  "NBA GSW vs LAL: Warriors Moneyline (+120) outright win verified. Converted 19 threes in high transition tempo. Forecaster @CourtVisionNBA verified.",
   "ETH/BTC Ratio: Dropped beneath 0.038 ratio as projected. Capital rotation away from legacy L1 verified.",
   "La Liga El Clasico: Barcelona 4-0 Real Madrid. Analyst @EPLFootyPicks predicted RMA DNB; result logged as FAILED (-7 pts penalty).",
-  "AlphaRecall Consensus Meta-Memory: System dynamically lowered football weight to 0.6x and elevated baseball analyst weight to 2.4x based on historical proof."
+  "AlphaRecall Consensus Meta-Memory: System dynamically lowered football weight to 0.6x and elevated proven soccer & NBA analyst weights to 2.2x based on historical proof."
 ];
 
 async function main() {
