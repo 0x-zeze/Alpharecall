@@ -262,6 +262,50 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
   } catch (err: unknown) {
     clearTimeout(timeoutId);
     const msg = err instanceof Error ? err.message : "Sui RPC unreachable";
+
+    // Fallback: If Tatum Gateway fails (e.g. HTTP 404), query official Sui Mainnet GraphQL
+    try {
+      const gqlRes = await fetch("https://graphql.mainnet.sui.io/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `query {
+            checkpoint {
+              sequenceNumber
+              digest
+              epoch {
+                epochId
+                referenceGasPrice
+              }
+            }
+            chainIdentifier
+          }`,
+        }),
+        cache: "no-store",
+      });
+
+      if (gqlRes.ok) {
+        const gqlData = await gqlRes.json();
+        const cp = gqlData?.data?.checkpoint;
+        if (cp?.sequenceNumber != null) {
+          return {
+            ok: true,
+            status: "live",
+            checkpoint: String(cp.sequenceNumber),
+            checkpointDigest: cp.digest ? String(cp.digest) : null,
+            epoch: cp.epoch?.epochId ? String(cp.epoch.epochId) : null,
+            referenceGasPrice: cp.epoch?.referenceGasPrice ? `${cp.epoch.referenceGasPrice} MIST` : null,
+            chainId: gqlData?.data?.chainIdentifier ? String(gqlData.data.chainIdentifier) : null,
+            latencyMs: Date.now() - startTime,
+            rpcUrl: "graphql.mainnet.sui.io",
+            isTatumGateway: isTatumConfigured,
+          };
+        }
+      }
+    } catch {
+      // GraphQL fallback failed, propagate original unavailable status
+    }
+
     return {
       ok: false,
       status: "unavailable",
