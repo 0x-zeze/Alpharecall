@@ -120,7 +120,19 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
     });
 
     if (!checkpointRes.ok) {
-      throw new Error(`HTTP ${checkpointRes.status} from ${rpcUrl}`);
+      let bodySnippet = "";
+      try {
+        const text = await checkpointRes.text();
+        const cleaned = text.replace(/\s+/g, " ").trim();
+        if (cleaned) {
+          bodySnippet = cleaned.slice(0, 200);
+        }
+      } catch {
+        bodySnippet = "";
+      }
+
+      const detail = bodySnippet ? `: ${bodySnippet}` : "";
+      throw new Error(`HTTP ${checkpointRes.status} from ${rpcUrl}${detail}`);
     }
 
     const checkpointData = await checkpointRes.json();
