@@ -8,8 +8,7 @@
 
 ## ⚡ Live Links & Resources
 
-* **Live Web App:** [http://43.159.170.31](http://43.159.170.31) *(Production VPS)*
-* **Vercel Deployment:** `[Live Demo URL: https://alpharecall.vercel.app]`
+* **Live Web App (Vercel):** `[Live Demo URL: https://alpharecall.vercel.app]`
 * **Demo Video Presentation:** `[Demo Video URL: https://youtu.be/placeholder]`
 * **GitHub Repository:** [https://github.com/0x-zeze/Alpharecall](https://github.com/0x-zeze/Alpharecall)
 * **Walruscan Explorer (Mainnet):** [https://walruscan.com/mainnet](https://walruscan.com/mainnet)
@@ -194,7 +193,7 @@ Navigate to your GitHub repository -> **Settings** -> **Secrets and variables** 
 
 | Secret Name | Description | Example / Note |
 |---|---|---|
-| `APP_URL` | Base URL of your deployed application **without** trailing slash | `https://alpharecall.vercel.app` or `http://43.159.170.31` |
+| `APP_URL` | Base URL of your deployed application **without** trailing slash | `https://alpharecall.vercel.app` or your custom domain |
 | `CRON_SECRET` | The exact authorization secret configured in your Vercel / server environment | e.g. `your_production_cron_secret` |
 
 ### Manual Verification
