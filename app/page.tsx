@@ -189,7 +189,7 @@ export default function Home() {
 
   return (
     <ThemeProvider>
-      <div className="flex min-h-screen bg-[var(--bg)] text-[var(--text)]">
+      <div className="flex flex-col md:flex-row min-h-screen bg-[var(--bg)] text-[var(--text)]">
         {/* Toast Notification */}
         {toastMessage && (
           <div className="fixed top-5 right-5 z-50 flex items-center gap-2.5 bg-[var(--card)] border border-[var(--accent)]/40 text-[var(--accent)] px-4 py-2.5 rounded-xl shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-3 text-xs font-mono-num font-semibold">

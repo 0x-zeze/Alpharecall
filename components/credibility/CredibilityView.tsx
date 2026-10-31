@@ -61,27 +61,27 @@ export function CredibilityView({
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bento-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Award className="w-5 h-5 text-[var(--accent)]" />
-            <h2 className="text-lg font-bold text-[var(--text)]">
+      <div className="bento-card p-4 sm:p-6 flex flex-col gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <Award className="w-5 h-5 text-[var(--accent)] shrink-0" />
+            <h2 className="text-base sm:text-lg font-bold text-[var(--text)] leading-tight">
               Forecaster Credibility Matrix
             </h2>
             <span className="text-[10px] font-mono-num px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 font-semibold">
               Walrus Consensus Engine
             </span>
           </div>
-          <p className="text-xs text-[var(--muted)] leading-relaxed max-w-2xl">
+          <p className="text-xs text-[var(--muted)] leading-relaxed">
             Credibility weights are dynamically calculated from immutable audit records recalled from Walrus Memory.
-            Formula: <span className="font-mono-num font-semibold text-[var(--text)]">Weight = max(0.40, min(2.40, 1.0 + Δ / 20))</span>.
+            Formula: <span className="font-mono-num font-semibold text-[var(--text)] break-all">Weight = max(0.40, min(2.40, 1.0 + delta / 20))</span>.
             <span className="block mt-1 text-[11px] text-[var(--muted)]/80">
               Note: Baseline scores originate from audited October 2024 backtest seeds, while live forecasts dynamically adjust analyst multipliers in real-time.
             </span>
           </p>
         </div>
 
-        <div className="flex items-center gap-4 bg-[var(--border-subtle)] px-4 py-2.5 rounded-[10px] border border-[var(--border)] shrink-0 text-xs font-mono-num">
+        <div className="flex items-center justify-between gap-3 bg-[var(--border-subtle)] px-4 py-2.5 rounded-[10px] border border-[var(--border)] text-xs font-mono-num w-full">
           <div>
             <span className="text-[10px] text-[var(--muted)] uppercase block">Weight Range</span>
             <span className="font-bold text-[var(--accent)]">0.40x — 2.40x</span>
@@ -109,15 +109,15 @@ export function CredibilityView({
           {forecasters.map((f, idx) => (
             <BentoCard key={f.handle} delay={idx * 0.05} className="flex flex-col justify-between">
               <div>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <h3 className="text-sm font-bold text-[var(--text)]">{f.handle}</h3>
+                <div className="flex flex-col gap-2 mb-2 min-w-0">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-[var(--text)] break-all">{f.handle}</h3>
                     <span className="text-[11px] text-[var(--muted)] block capitalize">
                       {f.category} Specialist
                     </span>
                   </div>
                   <span
-                    className={`text-xs font-mono-num font-bold px-2 py-0.5 rounded-[6px] border ${
+                    className={`self-start text-xs font-mono-num font-bold px-2 py-0.5 rounded-[6px] border ${
                       f.weightMultiplier >= 2.0
                         ? "bg-[var(--win-bg)] text-[var(--win)] border-[var(--win)]/30"
                         : f.weightMultiplier >= 1.0

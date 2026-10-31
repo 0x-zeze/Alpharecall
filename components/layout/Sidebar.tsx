@@ -70,7 +70,7 @@ export function Sidebar({
   return (
     <>
       {/* Mobile top bar — sidebar is hidden below md */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--bg)]/95 px-4 py-3 backdrop-blur-md">
+      <header className="md:hidden sticky top-0 z-30 w-full flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--bg)]/95 px-4 py-3 backdrop-blur-md">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 shrink-0 rounded-[10px] bg-[var(--card)] border border-[var(--border)] flex items-center justify-center font-mono-num font-bold text-sm text-[var(--accent)]">
             Ω
