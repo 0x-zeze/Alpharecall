@@ -52,23 +52,15 @@ export function AnalyticsView() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <BarChart3 className="w-5 h-5 text-[var(--accent)]" />
-            <h2 className="text-lg font-bold text-[var(--text)]">Advanced Analytics & Edge Verification</h2>
+            <h2 className="text-lg font-bold text-[var(--text)]">Analytics sample charts</h2>
           </div>
           <p className="text-xs text-[var(--muted)] max-w-2xl">
-            Granular breakdown of prediction accuracy across sports leagues, odds ranges, and confidence calibration.
+            These charts are a fixed demo sample. They are not computed from the current journal.
           </p>
         </div>
 
         <div className="flex items-center gap-4 bg-[var(--border-subtle)] px-4 py-2 rounded-[10px] border border-[var(--border)] font-mono-num text-xs">
-          <div>
-            <span className="text-[10px] text-[var(--muted)] uppercase block">Overall Sharpe</span>
-            <span className="font-bold text-[var(--win)]">2.41 (Top 1%)</span>
-          </div>
-          <div className="h-6 w-px bg-[var(--border)]" />
-          <div>
-            <span className="text-[10px] text-[var(--muted)] uppercase block">CLV (Closing Line Value)</span>
-            <span className="font-bold text-[var(--accent)]">+4.8% Average</span>
-          </div>
+          <span className="text-[11px] font-medium text-amber-400">Simulated sample</span>
         </div>
       </div>
 
@@ -130,7 +122,7 @@ export function AnalyticsView() {
         <BentoCard colSpan="col-span-12 lg:col-span-5" delay={0.1}>
           <BentoHeader
             title="Monthly Profit Progression"
-            subtitle="Net verified monthly return since platform inception"
+            subtitle="Fixed demo series. Not verified monthly return."
           />
 
           <div className="h-64 w-full mt-2">

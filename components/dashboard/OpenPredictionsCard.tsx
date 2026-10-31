@@ -21,7 +21,7 @@ export function OpenPredictionsCard({
       <div>
         <BentoHeader
           title="Active Open Predictions"
-          subtitle="Real-time fixtures & breakout levels pending resolution"
+          subtitle="Pending forecasts. Crypto settles via Tatum; sports stay manual."
           action={
             onViewAll && (
               <button
@@ -69,8 +69,8 @@ export function OpenPredictionsCard({
       </div>
 
       <div className="text-[11px] text-[var(--muted)] pt-3 border-t border-[var(--border)] font-mono-num flex justify-between">
-        <span>Total Open: {pendingPicks.length} Calls</span>
-        <span>Resolution Trigger: Tatum Sui / Sports Oracle</span>
+        <span>Pending shown: {pendingPicks.length}</span>
+        <span>Open total: {predictions.filter((p) => p.outcome === "PENDING").length}</span>
       </div>
     </BentoCard>
   );

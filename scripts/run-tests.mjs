@@ -27,6 +27,13 @@ import {
 } from "../lib/tatum.ts";
 import { dedupePredictions } from "../lib/dedupe.ts";
 import { DEMO_PREDICTIONS } from "../lib/demo-data.ts";
+import {
+  SIMULATED_STARTING_BANKROLL,
+  activeRisk,
+  countOnChainBlobs,
+  currentWinStreak,
+  simulatedBalance,
+} from "../lib/dashboard-stats.ts";
 
 let passed = 0;
 let failed = 0;
@@ -1141,6 +1148,99 @@ async function main() {
     });
 
     globalThis.fetch = originalFetch;
+  });
+
+  await describe("lib/dashboard-stats - simulated bankroll and streak", async () => {
+    const base = {
+      category: "audit",
+      sportType: "crypto",
+      title: "t",
+      content: "c",
+      analyst: "@A",
+      target: "SUI",
+      pick: "LONG",
+      odds: "+100",
+      stake: 100,
+      confidence: 3,
+      dateStr: "Oct 1",
+      writeStatus: "local-demo",
+    };
+
+    const rec = (id, outcome, pnl, timestamp, stake = 100, blobId) => ({
+      ...base,
+      id,
+      outcome,
+      pnl,
+      stake,
+      timestamp,
+      credibilityDelta: 0,
+      blobId,
+    });
+
+    await it("streak is 0, 2, 3, 5 and resets after a newer loss", () => {
+      assert.equal(currentWinStreak([]), 0);
+      assert.equal(currentWinStreak([rec("a", "ACCURATE", 10, 2), rec("b", "ACCURATE", 10, 1)]), 2);
+      assert.equal(
+        currentWinStreak([
+          rec("a", "ACCURATE", 10, 3),
+          rec("b", "ACCURATE", 10, 2),
+          rec("c", "ACCURATE", 10, 1),
+        ]),
+        3
+      );
+      assert.equal(
+        currentWinStreak([
+          rec("a", "ACCURATE", 10, 5),
+          rec("b", "ACCURATE", 10, 4),
+          rec("c", "ACCURATE", 10, 3),
+          rec("d", "ACCURATE", 10, 2),
+          rec("e", "ACCURATE", 10, 1),
+        ]),
+        5
+      );
+      assert.equal(
+        currentWinStreak([
+          rec("loss", "FAILED", -10, 9),
+          rec("a", "ACCURATE", 10, 5),
+          rec("b", "ACCURATE", 10, 4),
+        ]),
+        0
+      );
+    });
+
+    await it("activeRisk sums only PENDING stakes", () => {
+      const rows = [
+        rec("p1", "PENDING", 0, 1, 250),
+        rec("p2", "PENDING", 0, 2, 150),
+        rec("w", "ACCURATE", 80, 3, 400),
+      ];
+      assert.equal(activeRisk(rows), 400);
+    });
+
+    await it("balance is starting bankroll plus resolved pnl only", () => {
+      const rows = [
+        rec("w", "ACCURATE", 200, 2),
+        rec("l", "FAILED", -50, 1),
+        rec("p", "PENDING", 999, 3),
+      ];
+      assert.equal(simulatedBalance(rows), SIMULATED_STARTING_BANKROLL + 150);
+    });
+
+    await it("empty records do not invent numbers", () => {
+      assert.equal(currentWinStreak([]), 0);
+      assert.equal(activeRisk([]), 0);
+      assert.equal(simulatedBalance([]), SIMULATED_STARTING_BANKROLL);
+      assert.equal(countOnChainBlobs([]), 0);
+    });
+
+    await it("on-chain blob count ignores records without blobId", () => {
+      const rows = [
+        rec("a", "ACCURATE", 10, 1, 100, "blob-real"),
+        rec("b", "PENDING", 0, 2),
+        rec("c", "FAILED", -10, 3, 100, ""),
+      ];
+      assert.equal(countOnChainBlobs(rows), 1);
+    });
   });
 
   console.log("\n=================================================");

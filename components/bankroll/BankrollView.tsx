@@ -12,9 +12,10 @@ import {
 import { BentoCard, BentoHeader } from "../ui/BentoCard";
 import { AnimatedNumber } from "../ui/AnimatedNumber";
 import { Wallet, Calculator } from "lucide-react";
+import { SIMULATED_STARTING_BANKROLL } from "@/lib/dashboard-stats";
 
 export function BankrollView() {
-  const [bankrollTotal] = useState<number>(12450);
+  const [bankrollTotal] = useState<number>(SIMULATED_STARTING_BANKROLL);
   const [stakeMethod, setStakeMethod] = useState<"flat" | "kelly">("kelly");
   const [winProb, setWinProb] = useState<number>(65); // 65%
   const [decimalOdds, setDecimalOdds] = useState<number>(1.91); // -110 American
@@ -58,23 +59,15 @@ export function BankrollView() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Wallet className="w-5 h-5 text-[var(--accent)]" />
-            <h2 className="text-lg font-bold text-[var(--text)]">Bankroll & Capital Preservation</h2>
+            <h2 className="text-lg font-bold text-[var(--text)]">Simulated bankroll</h2>
           </div>
           <p className="text-xs text-[var(--muted)] max-w-2xl">
-            Mathematical stake sizing and active balance tracker to prevent risk-of-ruin while compounding edge.
+            Stake helper below uses a named simulated starting bankroll. The curve and ledger are a demo sample, not live cash.
           </p>
         </div>
 
         <div className="flex items-center gap-4 bg-[var(--border-subtle)] px-4 py-2.5 rounded-[10px] border border-[var(--border)] font-mono-num text-xs">
-          <div>
-            <span className="text-[10px] text-[var(--muted)] uppercase block">Max Drawdown</span>
-            <span className="font-bold text-[var(--win)]">3.8% Low</span>
-          </div>
-          <div className="h-6 w-px bg-[var(--border)]" />
-          <div>
-            <span className="text-[10px] text-[var(--muted)] uppercase block">Profit Factor</span>
-            <span className="font-bold text-[var(--accent)]">2.82x</span>
-          </div>
+          <span className="text-[11px] font-medium text-amber-400">Simulated</span>
         </div>
       </div>
 
@@ -84,15 +77,15 @@ export function BankrollView() {
         <BentoCard colSpan="col-span-12 lg:col-span-7" delay={0.05}>
           <BentoHeader
             title="Portfolio Balance Trajectory"
-            subtitle="Compounded portfolio valuation over current operational cycle"
+            subtitle="Demo sample curve. Not a live balance."
           />
 
           <div className="mb-2">
             <span className="text-3xl font-bold font-mono-num text-[var(--text)]">
               <AnimatedNumber value={bankrollTotal} prefix="$" />
             </span>
-            <span className="text-xs text-[var(--win)] font-mono-num ml-2 font-semibold">
-              +$2,450 (+24.5% Total)
+            <span className="text-xs text-[var(--muted)] font-mono-num ml-2">
+              starting ${SIMULATED_STARTING_BANKROLL.toLocaleString()} · simulated
             </span>
           </div>
 
@@ -220,7 +213,7 @@ export function BankrollView() {
       <BentoCard colSpan="col-span-12" delay={0.15}>
         <BentoHeader
           title="Bankroll Capital Ledger"
-          subtitle="Recent verified inflows, distributions, and settlement receipts"
+          subtitle="Demo sample rows. Not settlement receipts."
         />
 
         <div className="overflow-x-auto">

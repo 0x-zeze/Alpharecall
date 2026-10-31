@@ -5,13 +5,22 @@ import { BentoCard, BentoHeader } from "../ui/BentoCard";
 import { AnimatedNumber } from "../ui/AnimatedNumber";
 
 interface WinRateRingCardProps {
-  winRate: number; // e.g. 78.4
+  winRate: number;
   wins: number;
   losses: number;
   pending: number;
+  liveCount: number;
+  backtestCount: number;
 }
 
-export function WinRateRingCard({ winRate, wins, losses, pending }: WinRateRingCardProps) {
+export function WinRateRingCard({
+  winRate,
+  wins,
+  losses,
+  pending,
+  liveCount,
+  backtestCount,
+}: WinRateRingCardProps) {
   const radius = 48;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (winRate / 100) * circumference;
@@ -21,11 +30,6 @@ export function WinRateRingCard({ winRate, wins, losses, pending }: WinRateRingC
       <BentoHeader
         title="Win Rate"
         subtitle="Resolved picks hit percentage"
-        badge={
-          <span className="text-[10px] font-mono-num px-2 py-0.5 rounded-full bg-[var(--win-bg)] text-[var(--win)] font-semibold border border-[var(--win)]/20">
-            High Sharpe
-          </span>
-        }
       />
 
       <div className="flex items-center justify-between my-2">
@@ -92,8 +96,10 @@ export function WinRateRingCard({ winRate, wins, losses, pending }: WinRateRingC
       </div>
 
       <div className="text-[11px] text-[var(--muted)] pt-3 border-t border-[var(--border)] font-mono-num flex justify-between">
-        <span>Sample: {wins + losses} Resolved</span>
-        <span className="text-[var(--win)] font-medium">Top 2% Forecaster Pool</span>
+        <span>Sample: {wins + losses} resolved</span>
+        <span>
+          {liveCount} live · {backtestCount} backtest
+        </span>
       </div>
     </BentoCard>
   );

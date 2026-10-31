@@ -62,7 +62,7 @@ export function PnLCurveCard({ currentPnl, totalPnlPercent }: PnLCurveCardProps)
       <div>
         <BentoHeader
           title="Cumulative PnL Performance"
-          subtitle="Net verified earnings across sports fixtures & crypto calls"
+          subtitle="Simulated PnL from resolved backtest and live picks"
           action={
             <div className="flex items-center gap-1 bg-[var(--border-subtle)] p-1 rounded-[8px] border border-[var(--border)]">
               {(["7D", "30D", "90D", "All"] as const).map((tf) => (
@@ -84,10 +84,10 @@ export function PnLCurveCard({ currentPnl, totalPnlPercent }: PnLCurveCardProps)
 
         <div className="flex items-baseline gap-3 mb-4">
           <span className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text)] font-mono-num">
-            <AnimatedNumber value={currentPnl} prefix="+$" />
+            <AnimatedNumber value={Math.abs(currentPnl)} prefix={currentPnl >= 0 ? "+$" : "-$"} />
           </span>
           <span className="text-xs font-mono-num px-2 py-0.5 rounded-full bg-[var(--win-bg)] text-[var(--win)] border border-[var(--win)]/20 font-semibold">
-            +{totalPnlPercent}% Net Yield
+            {totalPnlPercent >= 0 ? "+" : ""}{totalPnlPercent}% of resolved stake
           </span>
         </div>
       </div>

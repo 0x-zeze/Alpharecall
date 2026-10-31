@@ -5,21 +5,24 @@ import { BentoCard, BentoHeader } from "../ui/BentoCard";
 import { Flame } from "lucide-react";
 
 interface StreakCardProps {
-  currentStreak: string; // e.g. "5W"
-  recentPicks: ("W" | "L")[]; // length 10
+  currentStreak: string;
+  recentPicks: ("W" | "L")[];
+  hotRun?: boolean;
 }
 
-export function StreakCard({ currentStreak = "5W", recentPicks = ["W", "W", "W", "W", "W", "L", "W", "W", "L", "W"] }: StreakCardProps) {
+export function StreakCard({ currentStreak, recentPicks, hotRun = false }: StreakCardProps) {
   return (
     <BentoCard colSpan="col-span-12 sm:col-span-6 lg:col-span-4" delay={0.15} className="flex flex-col justify-between">
       <BentoHeader
         title="Current Streak"
-        subtitle="Recent 10 prediction outcomes"
+        subtitle="Newest resolved outcomes"
         action={
-          <div className="flex items-center gap-1 text-[11px] font-mono-num font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-            <Flame className="w-3 h-3 fill-amber-500" />
-            <span>Hot Run</span>
-          </div>
+          hotRun ? (
+            <div className="flex items-center gap-1 text-[11px] font-mono-num font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+              <Flame className="w-3 h-3 fill-amber-500" />
+              <span>Hot Run · {currentStreak}</span>
+            </div>
+          ) : null
         }
       />
 
@@ -50,8 +53,8 @@ export function StreakCard({ currentStreak = "5W", recentPicks = ["W", "W", "W",
       </div>
 
       <div className="text-[11px] text-[var(--muted)] pt-3 border-t border-[var(--border)] font-mono-num flex justify-between">
-        <span>Variance Index: Low</span>
-        <span className="text-[var(--text)]">Last Loss: Oct 24</span>
+        <span>{recentPicks.length} recent resolved</span>
+        <span>{hotRun ? "3+ consecutive wins" : "No hot run"}</span>
       </div>
     </BentoCard>
   );

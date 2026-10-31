@@ -36,7 +36,7 @@ export function CalendarHeatmapCard({ daysCount = 35 }: CalendarHeatmapCardProps
     <BentoCard colSpan="col-span-12" delay={0.4} className="flex flex-col justify-between">
       <BentoHeader
         title="Daily Resolution Activity Heatmap"
-        subtitle="Tracking daily prediction profitability and volume across the last 5 weeks"
+        subtitle="Decorative sample only. Not calculated from records."
         action={
           <div className="flex items-center gap-2 text-[10px] font-mono-num text-[var(--muted)]">
             <span>Less</span>
@@ -78,8 +78,8 @@ export function CalendarHeatmapCard({ daysCount = 35 }: CalendarHeatmapCardProps
       </div>
 
       <div className="text-[11px] text-[var(--muted)] pt-3 border-t border-[var(--border)] font-mono-num flex justify-between">
-        <span>Active Trading Days: 26 / 35</span>
-        <span className="text-[var(--win)] font-semibold">Positive Days: 76.9%</span>
+        <span>Not a live calendar</span>
+        <span>Simulated pattern</span>
       </div>
     </BentoCard>
   );

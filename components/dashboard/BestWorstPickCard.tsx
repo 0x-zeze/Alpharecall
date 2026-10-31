@@ -11,23 +11,31 @@ interface BestWorstPickCardProps {
 }
 
 export function BestWorstPickCard({ bestPick, worstPick }: BestWorstPickCardProps) {
-  const bestTitle = bestPick?.title || "SUI/USDT Breakout > $2.00";
-  const bestPnl = bestPick?.pnl ?? 560;
-  const bestAnalyst = bestPick?.analyst || "@SuiEcosystemAlpha";
-  const bestContent = bestPick?.content || "Logged prior to onchain TVL passing $1B. Realized peak at $2.365.";
-  const bestDelta = bestPick?.credibilityDelta ?? 8;
+  if (!bestPick && !worstPick) {
+    return (
+      <BentoCard colSpan="col-span-12 lg:col-span-6" delay={0.35}>
+        <BentoHeader title="Best and worst resolved pick" subtitle="No resolved records yet." />
+      </BentoCard>
+    );
+  }
 
-  const worstTitle = worstPick?.title || "West Ham 2 - 1 Man United";
-  const worstPnl = worstPick?.pnl ?? -300;
-  const worstAnalyst = worstPick?.analyst || "@EPLForecasterBeta";
-  const worstContent = worstPick?.content || "Bowen 92&apos; penalty sealed loss over Casemiro&apos;s 81st-minute goal.";
-  const worstDelta = worstPick?.credibilityDelta ?? -6;
+  const bestTitle = bestPick?.target || bestPick?.title || "—";
+  const bestPnl = bestPick?.pnl ?? 0;
+  const bestAnalyst = bestPick?.analyst || "—";
+  const bestContent = bestPick?.content || "";
+  const bestDelta = bestPick?.credibilityDelta ?? 0;
+
+  const worstTitle = worstPick?.target || worstPick?.title || "—";
+  const worstPnl = worstPick?.pnl ?? 0;
+  const worstAnalyst = worstPick?.analyst || "—";
+  const worstContent = worstPick?.content || "";
+  const worstDelta = worstPick?.credibilityDelta ?? 0;
 
   return (
     <BentoCard colSpan="col-span-12 lg:col-span-6" delay={0.35} className="flex flex-col justify-between">
       <BentoHeader
-        title="Best &amp; Worst Pick of the Month"
-        subtitle="Outlier variance audits stored in Walrus Memory"
+        title="Best and worst resolved pick"
+        subtitle="Highest and lowest simulated PnL among resolved records"
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-2">
@@ -79,8 +87,8 @@ export function BestWorstPickCard({ bestPick, worstPick }: BestWorstPickCardProp
       </div>
 
       <div className="text-[11px] text-[var(--muted)] pt-3 border-t border-[var(--border)] font-mono-num flex justify-between">
-        <span>Asymmetry Index: 1.93x</span>
-        <span>Risk Adjusted Gain: +31.8%</span>
+        <span>Simulated PnL, not cash</span>
+        <span>{bestPick && worstPick ? "From current records" : "Partial sample"}</span>
       </div>
     </BentoCard>
   );
