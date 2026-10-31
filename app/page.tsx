@@ -212,7 +212,7 @@ export default function Home() {
         />
 
         {/* Main Work Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full pb-20 md:pb-8">
+        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full pb-24 md:pb-8">
           {activeTab === "dashboard" && (
             <DashboardView
               predictions={predictions}

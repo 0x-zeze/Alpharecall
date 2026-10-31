@@ -162,8 +162,70 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
         </div>
       )}
 
-      {/* Table Container */}
-      <div className="bento-card overflow-hidden">
+      {/* Mobile cards — table is desktop-only */}
+      <div className="md:hidden space-y-3">
+        {filteredPredictions.length === 0 ? (
+          <div className="bento-card p-8 text-center text-[var(--muted)] text-xs">
+            No matching predictions found.
+          </div>
+        ) : (
+          filteredPredictions.map((pred, idx) => {
+            const isExpanded = expandedRowId === pred.id;
+            const isHistoricalBacktest = pred.id.startsWith("rec-");
+            return (
+              <button
+                key={`${pred.id}-card-${idx}`}
+                type="button"
+                onClick={() => toggleRow(pred.id)}
+                className="bento-card w-full text-left p-4 space-y-2"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[10px] text-[var(--muted)] font-mono-num">{pred.dateStr}</div>
+                    <div className="font-semibold text-sm text-[var(--text)] break-words">{pred.target}</div>
+                    <div className="text-xs text-[var(--muted)] mt-0.5 break-words">{pred.pick}</div>
+                  </div>
+                  {pred.outcome === "ACCURATE" ? (
+                    <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--win-bg)] text-[var(--win)]">ACCURATE</span>
+                  ) : pred.outcome === "FAILED" ? (
+                    <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--loss-bg)] text-[var(--loss)]">FAILED</span>
+                  ) : (
+                    <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400">PENDING</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono-num text-[var(--muted)]">
+                  <span className="uppercase">{pred.sportType}</span>
+                  <span>{isHistoricalBacktest ? "Backtest" : "Live"}</span>
+                  <span>Stake ${pred.stake}</span>
+                  <span>{pred.analyst}</span>
+                  {pred.outcome !== "PENDING" && (
+                    <span className={pred.pnl >= 0 ? "text-[var(--win)]" : "text-[var(--loss)]"}>
+                      {pred.pnl >= 0 ? "+" : "-"}${Math.abs(pred.pnl)}
+                    </span>
+                  )}
+                </div>
+                {isExpanded && (
+                  <div className="pt-2 border-t border-[var(--border)] text-xs text-[var(--text)] leading-relaxed space-y-1">
+                    <p>{pred.reasoning || pred.content}</p>
+                    {pred.deadline && (
+                      <p className="text-[var(--muted)]">
+                        Deadline {new Date(pred.deadline).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
+                    <p className="text-[var(--muted)]">
+                      {pred.suiCheckpoint ? `Sui #${pred.suiCheckpoint.slice(-8)}` : "not anchored"}
+                      {pred.writeStatus === "confirmed" && pred.blobId ? " · Walrus confirmed" : ""}
+                    </p>
+                  </div>
+                )}
+              </button>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="bento-card overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono-num border-collapse">
             <thead className="bg-[var(--border-subtle)] text-[var(--muted)] uppercase border-b border-[var(--border)] text-[10px] select-none">
