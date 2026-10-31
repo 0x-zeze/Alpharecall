@@ -10,6 +10,7 @@ import { AnalyticsView } from "@/components/analytics/AnalyticsView";
 import { BankrollView } from "@/components/bankroll/BankrollView";
 import { DEMO_PREDICTIONS } from "@/lib/demo-data";
 import { dedupePredictions } from "@/lib/dedupe";
+import { countOnChainBlobs } from "@/lib/dashboard-stats";
 import {
   PredictionRecord,
   SuiNodeStatus,
@@ -207,7 +208,7 @@ export default function Home() {
           suiChainStatus={suiChainStatus}
           onSeed={handleSeedMemories}
           seeding={seeding}
-          walrusMemoriesCount={predictions.length}
+          walrusMemoriesCount={countOnChainBlobs(predictions)}
           isMainnetConnected={isMainnetConnected}
         />
 
@@ -231,7 +232,7 @@ export default function Home() {
           {activeTab === "credibility" && (
             <CredibilityView
               predictions={predictions}
-              walrusMemoriesCount={predictions.length}
+              walrusMemoriesCount={countOnChainBlobs(predictions)}
             />
           )}
 

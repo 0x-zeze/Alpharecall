@@ -304,12 +304,12 @@ export function CredibilityView({
       {/* Memory Recall Live Feed */}
       <div className="bento-card p-6 space-y-4">
         <BentoHeader
-          title="Live Walrus Memory Recall Feed"
-          subtitle="Recent immutable audit blobs retrieved across session boundaries"
+          title="Memory records"
+          subtitle="Shown records. On-chain count is only rows with a blob id."
           action={
-            <span className="flex items-center gap-1 text-[11px] font-mono-num text-[var(--accent)]">
+            <span className="flex items-center gap-1 text-[11px] font-mono-num text-[var(--muted)]">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>{walrusMemoriesCount} Blobs Stored</span>
+              <span>{walrusMemoriesCount} on-chain blobs</span>
             </span>
           }
         />

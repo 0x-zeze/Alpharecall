@@ -197,6 +197,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                   <span className="uppercase">{pred.sportType}</span>
                   <span>{isHistoricalBacktest ? "Backtest" : "Live"}</span>
                   <span>Stake ${pred.stake}</span>
+                  <span className="text-[9px]">simulated stake</span>
                   <span>{pred.analyst}</span>
                   {pred.outcome !== "PENDING" && (
                     <span className={pred.pnl >= 0 ? "text-[var(--win)]" : "text-[var(--loss)]"}>

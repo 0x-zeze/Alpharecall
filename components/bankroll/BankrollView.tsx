@@ -36,13 +36,7 @@ export function BankrollView() {
       : (bankrollTotal * 0.025); // 2.5% flat
 
   const balanceHistory = [
-    { date: "Oct 01", balance: 10000 },
-    { date: "Oct 06", balance: 10420 },
-    { date: "Oct 12", balance: 10890 },
-    { date: "Oct 18", balance: 11340 },
-    { date: "Oct 24", balance: 11150 },
-    { date: "Oct 28", balance: 12150 },
-    { date: "Oct 30", balance: 12450 },
+    { date: "sample", balance: SIMULATED_STARTING_BANKROLL },
   ];
 
   const transactions = [

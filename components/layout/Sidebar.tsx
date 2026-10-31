@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   BookOpen,
@@ -46,6 +46,17 @@ export function Sidebar({
 }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
 
   const navItems: { id: NavTab; label: string; icon: React.ElementType }[] = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -127,6 +138,7 @@ export function Sidebar({
                 <h2 className="font-bold text-sm text-[var(--text)]">AlphaRecall</h2>
               </div>
               <button
+                ref={closeRef}
                 onClick={() => setMobileOpen(false)}
                 className="w-9 h-9 rounded-[8px] border border-[var(--border)] flex items-center justify-center"
                 aria-label="Close menu"
@@ -157,8 +169,28 @@ export function Sidebar({
                 );
               })}
             </nav>
+            <div className="mt-4 space-y-1 text-[11px] font-mono-num text-[var(--muted)] border-t border-[var(--border)] pt-3">
+              <div className="flex justify-between gap-3">
+                <span>Tatum</span>
+                <span>{tatumStatus?.status === "live" ? "live" : tatumStatus ? "unavailable" : "—"}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span>Sui checkpoint</span>
+                <span>
+                  {suiChainStatus?.status === "live" && suiChainStatus.checkpoint
+                    ? `#${suiChainStatus.checkpoint.slice(-8)}`
+                    : suiChainStatus
+                    ? "unavailable"
+                    : "—"}
+                </span>
+              </div>
+            </div>
             <div className="mt-auto pt-4 text-[11px] text-[var(--muted)] font-mono-num">
-              {walrusMemoriesCount} memories · {isMainnetConnected ? "Walrus live" : "local demo"}
+              <span className={`font-mono-num font-semibold text-[10px] ${isMainnetConnected ? "text-[var(--win)]" : "text-[var(--muted)]"}`}>
+                {isMainnetConnected
+                  ? `${walrusMemoriesCount} on-chain blobs`
+                  : "0 on-chain · local demo"}
+              </span>
             </div>
           </aside>
         </div>
@@ -280,8 +312,10 @@ export function Sidebar({
                 <Database className="w-3 h-3 text-[var(--accent)]" />
                 Walrus Mainnet
               </span>
-              <span className="font-mono-num font-semibold text-[var(--win)] text-[10px]">
-                {walrusMemoriesCount} Blobs
+              <span className={`font-mono-num font-semibold text-[10px] ${isMainnetConnected ? "text-[var(--win)]" : "text-[var(--muted)]"}`}>
+                {isMainnetConnected
+                  ? `${walrusMemoriesCount} on-chain blobs`
+                  : "0 on-chain · local demo"}
               </span>
             </div>
 

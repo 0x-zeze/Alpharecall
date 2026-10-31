@@ -8,8 +8,8 @@
 
 ## ⚡ Live Links & Resources
 
-* **Live Web App (Vercel):** `[Live Demo URL: https://alpharecall.vercel.app]`
-* **Demo Video Presentation:** `[Demo Video URL: https://youtu.be/placeholder]`
+* **Live Web App (Vercel):** [https://alpharecall.vercel.app](https://alpharecall.vercel.app)
+* **Demo video:** TODO — add a real demo video URL before linking it.
 * **GitHub Repository:** [https://github.com/0x-zeze/Alpharecall](https://github.com/0x-zeze/Alpharecall)
 * **Walruscan Explorer (Mainnet):** [https://walruscan.com/mainnet](https://walruscan.com/mainnet)
 
