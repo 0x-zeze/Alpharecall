@@ -1,0 +1,140 @@
+name: AlphaRecall Resolver Scheduler
+
+"on":
+  schedule:
+    # Run every 30 minutes to stay well within the 6-hour RESOLVER_GRACE_WINDOW_MS
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: resolve-scheduler
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Execute Automated Prediction Settlement
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate Required Repository Secrets
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::Missing required secrets. Please configure APP_URL and CRON_SECRET in repository Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "✓ Required secrets are configured."
+
+      - name: Trigger Automated Resolver API Endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          # Strip trailing slashes safely from base URL
+          CLEAN_BASE_URL="${APP_URL%/}"
+          ENDPOINT="${CLEAN_BASE_URL}/api/resolve"
+
+          MAX_RETRIES=2
+          ATTEMPT=1
+          SUCCESS=0
+
+          while [ "$ATTEMPT" -le $((MAX_RETRIES + 1)) ]; do
+            echo "=== Resolution Dispatch Attempt $ATTEMPT of $((MAX_RETRIES + 1)) ==="
+
+            # Perform bounded GET request; output response to file, capture HTTP status code
+            HTTP_STATUS=$(curl -s -S -o response.json -w "%{http_code}" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              --max-time 60 \
+              "$ENDPOINT")
+
+            echo "HTTP Status Code: $HTTP_STATUS"
+
+            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+              echo "✓ Endpoint responded with success status $HTTP_STATUS."
+              SUCCESS=1
+              break
+            elif [ "$HTTP_STATUS" -eq 429 ]; then
+              echo "ℹ Rate limit / Cooldown active (HTTP 429). Treating as successful cycle."
+              SUCCESS=1
+              break
+            elif [ "$HTTP_STATUS" -eq 401 ] || [ "$HTTP_STATUS" -eq 403 ]; then
+              echo "::error::Authentication failed (HTTP $HTTP_STATUS): CRON_SECRET or APP_URL is invalid. Please verify repository secrets."
+              exit 1
+            elif [ "$HTTP_STATUS" -ge 500 ]; then
+              echo "::warning::Server error (HTTP $HTTP_STATUS) encountered on attempt $ATTEMPT."
+              if [ "$ATTEMPT" -le "$MAX_RETRIES" ]; then
+                BACKOFF_SEC=$((ATTEMPT * 5))
+                echo "Retrying in ${BACKOFF_SEC}s..."
+                sleep "$BACKOFF_SEC"
+              fi
+            else
+              echo "::error::Unexpected response status $HTTP_STATUS."
+              exit 1
+            fi
+
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          if [ "$SUCCESS" -ne 1 ]; then
+            echo "::error::Resolution request failed after retries (final status: $HTTP_STATUS)."
+            exit 1
+          fi
+
+      - name: Report Non-Sensitive Telemetry Summary
+        run: |
+          python3 - << 'EOF'
+          import json, os, sys
+
+          response_file = "response.json"
+          if not os.path.exists(response_file) or os.path.getsize(response_file) == 0:
+              print("No response body captured.")
+              sys.exit(0)
+
+          try:
+              with open(response_file, "r") as f:
+                  data = json.load(f)
+
+              if not isinstance(data, dict):
+                  print(f"Non-object response payload received: {type(data)}")
+                  sys.exit(0)
+
+              if data.get("cooldownActive"):
+                  print("==================================================")
+                  print("  RESOLUTION STATUS: COOLDOWN ACTIVE")
+                  print(f"  {data.get('message', 'Please wait for cooldown to expire.')}")
+                  print("==================================================")
+              elif data.get("success"):
+                  total = data.get("totalEvaluated", 0)
+                  resolved = data.get("resolvedCount", 0)
+                  skipped = data.get("skippedCount", 0)
+                  deferred = data.get("batchDeferredCount", 0)
+                  print("==================================================")
+                  print("  RESOLUTION REPORT SUMMARY")
+                  print("==================================================")
+                  print(f"• Total Evaluated Candidates : {total}")
+                  print(f"• Successfully Resolved      : {resolved}")
+                  print(f"• Skipped (Already Settled)  : {skipped}")
+                  print(f"• Batch Deferred (Next Tick) : {deferred}")
+
+                  results = data.get("results", [])
+                  if results:
+                      print("\nIndividual Candidate Telemetry:")
+                      for r in results:
+                          pid = r.get("predictionId", "unknown")
+                          status = r.get("status", "unknown")
+                          outcome = r.get("outcome", "-")
+                          analyst = r.get("analyst", "unknown")
+                          print(f"  - [{pid}] {analyst}: {status} (outcome: {outcome})")
+                  print("==================================================")
+              else:
+                  err = data.get("error", "Unknown error reported by endpoint")
+                  print(f"Endpoint execution note: {err}")
+          except Exception as exc:
+              print(f"Could not parse telemetry summary: {exc}")
+          EOF

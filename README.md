@@ -148,7 +148,7 @@ npm run keygen
 ```bash
 npm test
 ```
-*Executes 29 unit tests covering codec roundtrips, backward compatibility, boundary rules, deadline invariants, idempotency, Tatum parsing, and API security gates.*
+*Executes 37 unit tests covering codec roundtrips, backward compatibility, boundary rules, deadline invariants, idempotency, record deduplication per-id, Tatum parsing, and API security gates.*
 
 ### 6. Start Development Server
 ```bash
@@ -177,7 +177,36 @@ To deploy AlphaRecall to Vercel:
    * Build Command: `npm run build`
    * Node.js Version: **22.x**
 
-*Note on Cron Triggers: Vercel Hobby plan limits automated cron triggers to once per day. Scheduled resolutions can be triggered via the UI "Check results now" button or via GitHub Actions scheduled workflows.*
+---
+
+## 🤖 Automated Resolution (GitHub Actions Scheduler)
+
+Because Vercel Hobby plan restricts built-in cron executions to once daily, automated forecast settlement is managed via a dedicated GitHub Actions workflow: [`.github/workflows/resolve-scheduler.yml`](.github/workflows/resolve-scheduler.yml).
+
+### How It Works
+* **Frequency:** Triggers automatically every 30 minutes (`*/30 * * * *`) via GitHub Actions `schedule`, plus manual triggering via `workflow_dispatch`.
+* **Settlement Invariant:** Every mature forecast is evaluated within its 6-hour grace window (`RESOLVER_GRACE_WINDOW_MS = 6h`), preventing forecasts from expiring unresolved.
+* **Concurrency Protection:** Configured with `concurrency: { group: resolve-scheduler, cancel-in-progress: false }` to guarantee that two resolution passes never run simultaneously.
+* **Security & Non-Leakage:** Sends a secure request to `GET /api/resolve` with `Authorization: Bearer <CRON_SECRET>`. The secret is passed strictly through environment variables and never exposed in logs or command outputs.
+
+### Required GitHub Secrets
+Navigate to your GitHub repository -> **Settings** -> **Secrets and variables** -> **Actions**, and add the following two repository secrets:
+
+| Secret Name | Description | Example / Note |
+|---|---|---|
+| `APP_URL` | Base URL of your deployed application **without** trailing slash | `https://alpharecall.vercel.app` or `http://43.159.170.31` |
+| `CRON_SECRET` | The exact authorization secret configured in your Vercel / server environment | e.g. `your_production_cron_secret` |
+
+### Manual Verification
+To manually test resolution from GitHub:
+1. Go to the **Actions** tab in your GitHub repository.
+2. Under "Workflows", select **AlphaRecall Resolver Scheduler**.
+3. Click the **Run workflow** dropdown and confirm with the green button.
+4. Inspect the workflow run logs to view non-sensitive resolution telemetry (evaluated candidates, resolved count, skipped count, and cooldown notices).
+
+### Operational Caveats
+* **Schedule Variance:** GitHub Actions cron schedules may experience queue latency of several minutes during peak platform traffic. Because AlphaRecall's grace window is 6 hours, minor dispatch delays have zero adverse effect on forecast resolution.
+* **Public Repository Inactivity Rule:** GitHub automatically disables scheduled workflows on public repositories after 60 days without repository activity. Scheduled runs can be re-enabled at any time by pushing a commit or manually triggering a workflow run.
 
 ---
 

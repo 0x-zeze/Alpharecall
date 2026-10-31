@@ -73,6 +73,25 @@ export async function GET(req: Request) {
 
   try {
     const now = Date.now();
+    const elapsedSinceLastResolve = now - lastResolveTimestampMs;
+
+    // Enforce 60s cooldown to respect API rate limits
+    if (elapsedSinceLastResolve < RESOLVE_COOLDOWN_MS && lastResolveTimestampMs !== 0) {
+      const waitSeconds = Math.ceil((RESOLVE_COOLDOWN_MS - elapsedSinceLastResolve) / 1000);
+      return NextResponse.json({
+        success: true,
+        cooldownActive: true,
+        message: `Resolution cooldown active. Please wait ${waitSeconds}s before checking results again.`,
+        totalEvaluated: 0,
+        resolvedCount: 0,
+        skippedCount: 0,
+        batchDeferredCount: 0,
+        results: [],
+      });
+    }
+
+    lastResolveTimestampMs = now;
+
     const all = await getAllMemories();
     const pendingPicks = all.filter((p) => p.outcome === "PENDING");
     const report = await resolveDuePredictions(pendingPicks, now);
