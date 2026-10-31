@@ -1,6 +1,7 @@
 import { MemWal } from "@mysten-incubation/memwal";
 import type { PredictionRecord } from "./types";
 import { DEMO_PREDICTIONS } from "./demo-data";
+import { dedupePredictions } from "./dedupe";
 import {
   encodeMemory,
   decodeMemory,
@@ -87,7 +88,7 @@ export async function checkWalrusConnection(): Promise<{
 export async function getAllMemories(): Promise<MemoryRecord[]> {
   const client = getMemWalClient();
   if (!client) {
-    return localDemoCache;
+    return dedupePredictions(localDemoCache);
   }
 
   try {
@@ -122,16 +123,16 @@ export async function getAllMemories(): Promise<MemoryRecord[]> {
     }
 
     if (validRecords.length > 0) {
-      // Sort chronologically newest first
+      // Sort chronologically newest first and deduplicate by prediction id
       validRecords.sort((a, b) => b.timestamp - a.timestamp);
-      return validRecords;
+      return dedupePredictions(validRecords);
     }
 
     // If no valid Walrus memories were recalled yet, return local demo data
-    return localDemoCache;
+    return dedupePredictions(localDemoCache);
   } catch (error) {
     console.warn("Falling back to local demo data after Walrus recall failure:", error);
-    return localDemoCache;
+    return dedupePredictions(localDemoCache);
   }
 }
 

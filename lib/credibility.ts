@@ -1,4 +1,7 @@
 import type { PredictionRecord, PredictionCategory } from "./types";
+import { dedupePredictions } from "./dedupe";
+
+export { dedupePredictions } from "./dedupe";
 
 export const MIN_CREDIBILITY_WEIGHT = 0.4;
 export const MAX_CREDIBILITY_WEIGHT = 2.4;
@@ -49,6 +52,9 @@ export function computeWeight(
  * Pure statistical computation for forecasters based on an array of prediction records.
  */
 export function computeForecasterStats(records: PredictionRecord[]): ForecasterAnalysis[] {
+  // Defensive deduplication guard: ensures clean stats even if dirty data is provided
+  const cleanRecords = dedupePredictions(records);
+
   const map = new Map<
     string,
     {
@@ -65,7 +71,7 @@ export function computeForecasterStats(records: PredictionRecord[]): ForecasterA
     }
   >();
 
-  for (const r of records) {
+  for (const r of cleanRecords) {
     if (!r.analyst || r.analyst.startsWith("AlphaRecall Consensus")) continue;
 
     const existing = map.get(r.analyst) || {
@@ -169,6 +175,7 @@ export function computeForecasterStats(records: PredictionRecord[]): ForecasterA
 }
 
 export interface MarketOpinion {
+  id?: string;
   analyst: string;
   pick: string; // e.g., "OVER 2.5", "UNDER 2.5"
   confidence?: number; // 1 to 5
@@ -234,7 +241,22 @@ export function consensus(
   const boostedSharps: string[] = [];
   const dampenedForecasters: string[] = [];
 
+  // Deduplicate opinions: allow only one pick per analyst or per id
+  const uniqueOpinions: MarketOpinion[] = [];
+  const seenAnalysts = new Set<string>();
+  const seenIds = new Set<string>();
+
   for (const op of opinions) {
+    if (!op || !op.analyst) continue;
+    if (seenAnalysts.has(op.analyst)) continue;
+    if (op.id && seenIds.has(op.id)) continue;
+
+    seenAnalysts.add(op.analyst);
+    if (op.id) seenIds.add(op.id);
+    uniqueOpinions.push(op);
+  }
+
+  for (const op of uniqueOpinions) {
     const rawConf = typeof op.confidence === "number" && op.confidence > 0 ? op.confidence : 1.0;
     const w = getWeight(op.analyst);
 

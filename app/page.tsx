@@ -9,6 +9,7 @@ import { CredibilityView } from "@/components/credibility/CredibilityView";
 import { AnalyticsView } from "@/components/analytics/AnalyticsView";
 import { BankrollView } from "@/components/bankroll/BankrollView";
 import { DEMO_PREDICTIONS } from "@/lib/demo-data";
+import { dedupePredictions } from "@/lib/dedupe";
 import {
   PredictionRecord,
   SuiNodeStatus,
@@ -83,13 +84,8 @@ export default function Home() {
             oracleFallbackUsed: m.oracleFallbackUsed,
           }));
 
-          // Merge without duplicates based on ID
-          const merged = [...liveRecords];
-          DEMO_PREDICTIONS.forEach((dp) => {
-            if (!merged.some((r) => r.id === dp.id)) {
-              merged.push(dp);
-            }
-          });
+          // Deduplicate live records and merge with canonical seeds
+          const merged = dedupePredictions([...liveRecords, ...DEMO_PREDICTIONS]);
           setPredictions(merged);
         }
       }
@@ -177,6 +173,10 @@ export default function Home() {
         return { success: false, error: errorMsg };
       }
 
+      if (resData?.data) {
+        // Optimistic state update deduplicated by ID
+        setPredictions((prev) => dedupePredictions([resData.data, ...prev]));
+      }
       showToast(`✓ Forecast committed! Sui Anchor: ${resData.suiAnchor || "pending"}`);
       fetchData();
       return { success: true };

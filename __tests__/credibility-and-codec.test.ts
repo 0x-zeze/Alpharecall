@@ -11,6 +11,7 @@ import {
   computeWeight,
   computeForecasterStats,
   consensus,
+  dedupePredictions,
   MIN_CREDIBILITY_WEIGHT,
   MAX_CREDIBILITY_WEIGHT,
 } from "../lib/credibility";
@@ -295,5 +296,57 @@ describe("lib/credibility - consensus() Evaluation", () => {
     expect(res.boostedSharps).toContain("@MasterSharp");
     expect(res.dampenedForecasters).toContain("@HypeGuy1");
     expect(res.weightedConfidence).toBeGreaterThan(res.unweightedConfidence);
+  });
+});
+
+describe("lib/dedupe - dedupePredictions()", () => {
+  it("should collapse pending and resolved record with same id into single resolved record", () => {
+    const pending: PredictionRecord = {
+      id: "dup-1",
+      category: "audit",
+      sportType: "crypto",
+      title: "SUI Pick",
+      content: "Pending thesis",
+      analyst: "@Sharps",
+      target: "SUI",
+      pick: "OVER 2",
+      odds: "-110",
+      stake: 200,
+      pnl: 0,
+      outcome: "PENDING",
+      credibilityDelta: 0,
+      confidence: 4,
+      timestamp: 1000,
+      dateStr: "Day 1",
+      writeStatus: "local-demo",
+      reasoning: "DEX liquidity surge",
+    };
+
+    const resolved: PredictionRecord = {
+      id: "dup-1",
+      category: "audit",
+      sportType: "crypto",
+      title: "Resolution: SUI Pick",
+      content: "Resolved accurate",
+      analyst: "@Sharps",
+      target: "SUI",
+      pick: "OVER 2",
+      odds: "-110",
+      stake: 200,
+      pnl: 180,
+      outcome: "ACCURATE",
+      credibilityDelta: 6,
+      confidence: 4,
+      timestamp: 2000,
+      dateStr: "Day 2",
+      writeStatus: "confirmed",
+      blobId: "blob_res_1",
+    };
+
+    const deduped = dedupePredictions([pending, resolved]);
+    expect(deduped.length).toBe(1);
+    expect(deduped[0].outcome).toBe("ACCURATE");
+    expect(deduped[0].pnl).toBe(180);
+    expect(deduped[0].reasoning).toBe("DEX liquidity surge"); // Preserved metadata!
   });
 });

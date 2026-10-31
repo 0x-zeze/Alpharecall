@@ -188,12 +188,12 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                   </td>
                 </tr>
               ) : (
-                filteredPredictions.map((pred) => {
+                filteredPredictions.map((pred, idx) => {
                   const isExpanded = expandedRowId === pred.id;
                   const isHistoricalBacktest = pred.id.startsWith("rec-");
 
                   return (
-                    <React.Fragment key={pred.id}>
+                    <React.Fragment key={`${pred.id}-${pred.writeStatus}-${idx}`}>
                       <tr
                         onClick={() => toggleRow(pred.id)}
                         className={`hover:bg-[var(--border-subtle)]/50 transition cursor-pointer ${

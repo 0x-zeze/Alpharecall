@@ -25,6 +25,8 @@ import {
   getSuiChainMetrics,
   getLatestSuiCheckpointAnchor,
 } from "../lib/tatum.ts";
+import { dedupePredictions } from "../lib/dedupe.ts";
+import { DEMO_PREDICTIONS } from "../lib/demo-data.ts";
 
 let passed = 0;
 let failed = 0;
@@ -699,6 +701,446 @@ async function main() {
       assert.equal(json.success, false);
       assert.equal(json.error?.includes("Forbidden"), true);
     });
+  });
+
+  // --------------------------------------------------------------------------
+  // SUITE 7: BAGIAN 1 - Record Deduplication & E2E Resolution Guarantees
+  // --------------------------------------------------------------------------
+  await describe("lib/dedupe - Record Deduplication & E2E Resolution Guarantees", async () => {
+    const originalFetch = globalThis.fetch;
+
+    await it("pending + resolved with same id -> only resolved remains, stats count 1 pick, delta is not doubled", () => {
+      const pending = {
+        id: "pred-dupe-1",
+        category: "audit",
+        sportType: "crypto",
+        title: "SUI Support Bounce",
+        content: "Predicted bounce > $1.85",
+        analyst: "@DedupSharp",
+        target: "SUI/USDT Support",
+        pick: "BOUNCE > $1.85",
+        odds: "+120",
+        stake: 200,
+        pnl: 0,
+        outcome: "PENDING",
+        credibilityDelta: 0,
+        confidence: 4,
+        timestamp: 1730000000000,
+        dateStr: "Oct 27",
+        writeStatus: "local-demo",
+        reasoning: "Deep orderbook support",
+      };
+
+      const resolved = {
+        id: "pred-dupe-1",
+        category: "audit",
+        sportType: "crypto",
+        title: "Resolution: SUI Support Bounce",
+        content: "SUI resolved at $2.10",
+        analyst: "@DedupSharp",
+        target: "SUI/USDT Support",
+        pick: "BOUNCE > $1.85",
+        odds: "+120",
+        stake: 200,
+        pnl: 180,
+        outcome: "ACCURATE",
+        credibilityDelta: 6,
+        confidence: 4,
+        timestamp: 1730010000000,
+        dateStr: "Oct 27",
+        writeStatus: "confirmed",
+        blobId: "walrus_blob_res_123",
+      };
+
+      // 1. Direct dedupe call
+      const deduped = dedupePredictions([pending, resolved]);
+      assert.equal(deduped.length, 1);
+      assert.equal(deduped[0].id, "pred-dupe-1");
+      assert.equal(deduped[0].outcome, "ACCURATE");
+      assert.equal(deduped[0].credibilityDelta, 6);
+      assert.equal(deduped[0].pnl, 180);
+      assert.equal(deduped[0].blobId, "walrus_blob_res_123");
+      // Preserved metadata from pending
+      assert.equal(deduped[0].reasoning, "Deep orderbook support");
+
+      // 2. computeForecasterStats called with dirty array directly (defensive layer)
+      const stats = computeForecasterStats([pending, resolved]);
+      assert.equal(stats.length, 1);
+      const s = stats[0];
+      assert.equal(s.handle, "@DedupSharp");
+      assert.equal(s.totalPicks, 1); // exactly 1 pick, NOT 2!
+      assert.equal(s.wins, 1);
+      assert.equal(s.pending, 0); // pending row eliminated
+      assert.equal(s.deltaTotal, 6); // delta not doubled!
+      assert.equal(s.netPnl, 180);
+    });
+
+    await it("resolved appears before pending in array -> identical result", () => {
+      const pending = {
+        id: "pred-dupe-rev",
+        category: "audit",
+        sportType: "crypto",
+        title: "BTC Range High",
+        content: "",
+        analyst: "@RevSharp",
+        target: "BTC/USDT",
+        pick: "LONG > $70k",
+        odds: "+110",
+        stake: 100,
+        pnl: 0,
+        outcome: "PENDING",
+        credibilityDelta: 0,
+        confidence: 3,
+        timestamp: 1000,
+        dateStr: "Day 1",
+        writeStatus: "local-demo",
+        reasoning: "Range high breakout",
+      };
+
+      const resolved = {
+        id: "pred-dupe-rev",
+        category: "audit",
+        sportType: "crypto",
+        title: "Resolution: BTC Range High",
+        content: "BTC resolved at $71k",
+        analyst: "@RevSharp",
+        target: "BTC/USDT",
+        pick: "LONG > $70k",
+        odds: "+110",
+        stake: 100,
+        pnl: 110,
+        outcome: "ACCURATE",
+        credibilityDelta: 6,
+        confidence: 3,
+        timestamp: 2000,
+        dateStr: "Day 2",
+        writeStatus: "confirmed",
+      };
+
+      // Array with resolved first, pending second
+      const deduped = dedupePredictions([resolved, pending]);
+      assert.equal(deduped.length, 1);
+      assert.equal(deduped[0].outcome, "ACCURATE");
+      assert.equal(deduped[0].timestamp, 2000);
+      assert.equal(deduped[0].reasoning, "Range high breakout");
+    });
+
+    await it("two pending with same id -> newest timestamp wins", () => {
+      const p1 = {
+        id: "pred-pending-dup",
+        category: "audit",
+        sportType: "soccer",
+        title: "Match A",
+        content: "Draft",
+        analyst: "@Footy",
+        target: "Match A",
+        pick: "W1",
+        odds: "-110",
+        stake: 100,
+        pnl: 0,
+        outcome: "PENDING",
+        credibilityDelta: 0,
+        confidence: 2,
+        timestamp: 1000,
+        dateStr: "Day 1",
+        writeStatus: "local-demo",
+        reasoning: "Initial draft reasoning",
+      };
+
+      const p2 = {
+        id: "pred-pending-dup",
+        category: "audit",
+        sportType: "soccer",
+        title: "Match A Updated",
+        content: "Updated pick",
+        analyst: "@Footy",
+        target: "Match A",
+        pick: "W1",
+        odds: "-110",
+        stake: 100,
+        pnl: 0,
+        outcome: "PENDING",
+        credibilityDelta: 0,
+        confidence: 3,
+        timestamp: 3000, // Newer!
+        dateStr: "Day 2",
+        writeStatus: "local-demo",
+        reasoning: "Refined tactical reasoning",
+      };
+
+      const deduped1 = dedupePredictions([p1, p2]);
+      assert.equal(deduped1.length, 1);
+      assert.equal(deduped1[0].timestamp, 3000);
+      assert.equal(deduped1[0].title, "Match A Updated");
+      assert.equal(deduped1[0].reasoning, "Refined tactical reasoning");
+
+      const deduped2 = dedupePredictions([p2, p1]);
+      assert.equal(deduped2.length, 1);
+      assert.equal(deduped2[0].timestamp, 3000);
+      assert.equal(deduped2[0].title, "Match A Updated");
+    });
+
+    await it("two resolved with same id, different outcome -> newest timestamp wins, no crash", () => {
+      const r1 = {
+        id: "res-conflict",
+        category: "audit",
+        sportType: "crypto",
+        title: "Old Resolution",
+        content: "Erroneous early settlement",
+        analyst: "@Analyst",
+        target: "SUI",
+        pick: "OVER 2",
+        odds: "+100",
+        stake: 100,
+        pnl: 100,
+        outcome: "ACCURATE",
+        credibilityDelta: 6,
+        confidence: 3,
+        timestamp: 1000,
+        dateStr: "Day 1",
+        writeStatus: "confirmed",
+      };
+
+      const r2 = {
+        id: "res-conflict",
+        category: "audit",
+        sportType: "crypto",
+        title: "Corrected Resolution",
+        content: "Official final settlement",
+        analyst: "@Analyst",
+        target: "SUI",
+        pick: "OVER 2",
+        odds: "+100",
+        stake: 100,
+        pnl: -100,
+        outcome: "FAILED",
+        credibilityDelta: -5,
+        confidence: 3,
+        timestamp: 5000, // Newer!
+        dateStr: "Day 2",
+        writeStatus: "confirmed",
+      };
+
+      const deduped = dedupePredictions([r1, r2]);
+      assert.equal(deduped.length, 1);
+      assert.equal(deduped[0].outcome, "FAILED");
+      assert.equal(deduped[0].timestamp, 5000);
+      assert.equal(deduped[0].credibilityDelta, -5);
+      assert.equal(deduped[0].pnl, -100);
+    });
+
+    await it("non-empty metadata from pending is preserved after merge", () => {
+      const pendingWithMeta = {
+        id: "meta-test-01",
+        category: "prediction",
+        sportType: "crypto",
+        title: "SUI Macro Breakout",
+        content: "Full thesis",
+        analyst: "@MacroDesk",
+        target: "SUI/USDT",
+        pick: "LONG > $2.20",
+        odds: "+145",
+        stake: 500,
+        pnl: 0,
+        outcome: "PENDING",
+        credibilityDelta: 0,
+        confidence: 5,
+        timestamp: 1730000000000,
+        dateStr: "Oct 27",
+        writeStatus: "local-demo",
+        reasoning: "Liquidity aggregation on DEX volumes",
+        deadline: "2026-11-02T12:00:00.000Z",
+        direction: "above",
+        targetPrice: 2.2,
+        asset: "SUI",
+        tags: ["Sui", "Macro", "Breakout"],
+        suiCheckpoint: "10555500",
+        suiCheckpointDigest: "0xdigest123",
+      };
+
+      // Resolution record might omit some metadata fields
+      const resolutionWithoutMeta = {
+        id: "meta-test-01",
+        category: "audit",
+        sportType: "crypto",
+        title: "Resolution: SUI Macro Breakout",
+        content: "Target achieved at $2.31",
+        analyst: "@MacroDesk",
+        target: "SUI/USDT",
+        pick: "LONG > $2.20",
+        odds: "+145",
+        stake: 500,
+        pnl: 450,
+        outcome: "ACCURATE",
+        credibilityDelta: 8,
+        confidence: 5,
+        timestamp: 1730086400000,
+        dateStr: "Oct 28",
+        writeStatus: "confirmed",
+        blobId: "walrus_blob_final_999",
+        postMortem: "SUI pumped 14% past target",
+      };
+
+      const deduped = dedupePredictions([pendingWithMeta, resolutionWithoutMeta]);
+      assert.equal(deduped.length, 1);
+      const m = deduped[0];
+      assert.equal(m.outcome, "ACCURATE");
+      assert.equal(m.pnl, 450);
+      assert.equal(m.blobId, "walrus_blob_final_999");
+      assert.equal(m.postMortem, "SUI pumped 14% past target");
+      // Preserved from pending:
+      assert.equal(m.reasoning, "Liquidity aggregation on DEX volumes");
+      assert.equal(m.deadline, "2026-11-02T12:00:00.000Z");
+      assert.equal(m.direction, "above");
+      assert.equal(m.targetPrice, 2.2);
+      assert.equal(m.asset, "SUI");
+      assert.deepEqual(m.tags, ["Sui", "Macro", "Breakout"]);
+      assert.equal(m.suiCheckpoint, "10555500");
+      assert.equal(m.suiCheckpointDigest, "0xdigest123");
+    });
+
+    await it("consensus does not count the same pick or analyst twice", () => {
+      // Opinion list with duplicate analyst entries
+      const opinions = [
+        { analyst: "@SharpOne", pick: "OVER 2.5", confidence: 4 },
+        { analyst: "@SharpOne", pick: "UNDER 2.5", confidence: 2 }, // Duplicate analyst!
+        { analyst: "@SharpTwo", pick: "OVER 2.5", confidence: 3 },
+      ];
+
+      const weights = {
+        "@SharpOne": 2.0,
+        "@SharpTwo": 1.0,
+      };
+
+      const res = consensus("Match Consensus Test", opinions, weights);
+      // Only 2 distinct opinions evaluated (@SharpOne first choice and @SharpTwo)
+      assert.equal(res.unweightedConfidence, 100); // Both kept opinions are "OVER 2.5"
+      assert.equal(res.weightedPick, "OVER 2.5");
+      assert.equal(res.breakdown.length, 1);
+      assert.deepEqual(res.breakdown[0].supportingAnalysts, ["@SharpOne", "@SharpTwo"]);
+    });
+
+    await it("regression: 16 seed records (unique ids) remain completely unchanged after dedupe", () => {
+      const dedupedSeeds = dedupePredictions(DEMO_PREDICTIONS);
+      assert.equal(dedupedSeeds.length, DEMO_PREDICTIONS.length);
+      assert.equal(dedupedSeeds.length, 16);
+
+      for (let i = 0; i < DEMO_PREDICTIONS.length; i++) {
+        assert.equal(dedupedSeeds[i].id, DEMO_PREDICTIONS[i].id);
+        assert.equal(dedupedSeeds[i].outcome, DEMO_PREDICTIONS[i].outcome);
+        assert.equal(dedupedSeeds[i].target, DEMO_PREDICTIONS[i].target);
+        assert.equal(dedupedSeeds[i].stake, DEMO_PREDICTIONS[i].stake);
+        assert.equal(dedupedSeeds[i].credibilityDelta, DEMO_PREDICTIONS[i].credibilityDelta);
+      }
+    });
+
+    await it("End-to-end offline flow: pending crypto prediction -> resolver produces resolution (mock Tatum) -> state update -> stats contains exactly 1 record and analyst weight updates accordingly", async () => {
+      process.env.TATUM_API_KEY = "mock_tatum_key_e2e";
+      process.env.ALLOW_PUBLIC_ORACLE_FALLBACK = "false";
+
+      const mockDeadlineTime = Date.parse("2024-10-27T10:00:00.000Z");
+      const mockResolveTime = Date.parse("2024-10-27T11:00:00.000Z"); // Within 6h grace
+
+      // 1. Initial pending forecast created
+      const pendingForecast = {
+        id: "e2e-pred-sui-01",
+        category: "prediction",
+        sportType: "crypto",
+        title: "SUI Target Test",
+        content: "Anticipating SUI breakout > $2.00",
+        analyst: "@E2EQuant",
+        target: "SUI/USDT Spot Breakout",
+        pick: "LONG SUI > $2.00",
+        odds: "+125",
+        stake: 300,
+        pnl: 0,
+        outcome: "PENDING",
+        credibilityDelta: 0,
+        confidence: 5,
+        timestamp: mockDeadlineTime - 3600000,
+        dateStr: "Oct 27, 2024",
+        writeStatus: "confirmed",
+        deadline: new Date(mockDeadlineTime).toISOString(),
+        direction: "above",
+        targetPrice: 2.0,
+        asset: "SUI",
+        reasoning: "Onchain liquidity expansion",
+      };
+
+      // Baseline stats before resolution
+      const statsBefore = computeForecasterStats([pendingForecast]);
+      assert.equal(statsBefore.length, 1);
+      assert.equal(statsBefore[0].totalPicks, 1);
+      assert.equal(statsBefore[0].pending, 1);
+      assert.equal(statsBefore[0].wins, 0);
+      assert.equal(statsBefore[0].deltaTotal, 0);
+      assert.equal(statsBefore[0].weightMultiplier, 1.0); // Baseline weight
+
+      // 2. Mock Tatum rate returning $2.30 (> target $2.00)
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("api.tatum.io/v3/tatum/rate/SUI")) {
+          return {
+            ok: true,
+            json: async () => ({ value: "2.30", basePair: "USD" }),
+          };
+        }
+        return { ok: false };
+      };
+
+      // 3. Resolver executes
+      const resolution = await resolveCryptoPrediction(pendingForecast, mockResolveTime);
+      assert.equal(resolution.status, "resolved");
+      assert.equal(resolution.outcome, "ACCURATE");
+      assert.equal(resolution.delta, 8); // High confidence 5 win -> +8
+
+      // 4. Create resolution record (as written to Walrus storage)
+      const resolutionRecord = {
+        id: pendingForecast.id,
+        category: "audit",
+        sportType: "crypto",
+        title: `Resolution: ${pendingForecast.title}`,
+        content: resolution.evidence.details,
+        analyst: pendingForecast.analyst,
+        target: pendingForecast.target,
+        pick: pendingForecast.pick,
+        odds: pendingForecast.odds,
+        stake: pendingForecast.stake,
+        pnl: 270,
+        outcome: resolution.outcome,
+        credibilityDelta: resolution.delta,
+        confidence: pendingForecast.confidence,
+        timestamp: mockResolveTime,
+        dateStr: "Oct 27, 2024",
+        writeStatus: "confirmed",
+        blobId: "walrus_blob_e2e_res_888",
+        postMortem: resolution.evidence.details,
+      };
+
+      // 5. Simulate state update where storage contains both pending and resolved records
+      const storageState = [resolutionRecord, pendingForecast];
+
+      // Verification A: dedupePredictions merges them into exactly 1 record
+      const clientState = dedupePredictions(storageState);
+      assert.equal(clientState.length, 1);
+      assert.equal(clientState[0].id, "e2e-pred-sui-01");
+      assert.equal(clientState[0].outcome, "ACCURATE");
+      assert.equal(clientState[0].pnl, 270);
+      assert.equal(clientState[0].reasoning, "Onchain liquidity expansion"); // Preserved!
+      assert.equal(clientState[0].blobId, "walrus_blob_e2e_res_888");
+
+      // Verification B: computeForecasterStats accurately counts 1 pick, 0 pending, 1 win, and weight upgrades to 1.40x
+      const statsAfter = computeForecasterStats(storageState);
+      assert.equal(statsAfter.length, 1);
+      const e2eAnalyst = statsAfter[0];
+      assert.equal(e2eAnalyst.totalPicks, 1); // NOT 2!
+      assert.equal(e2eAnalyst.pending, 0); // NOT 1!
+      assert.equal(e2eAnalyst.wins, 1);
+      assert.equal(e2eAnalyst.losses, 0);
+      assert.equal(e2eAnalyst.deltaTotal, 8); // 1.0 + 8/20 = 1.40
+      assert.equal(e2eAnalyst.weightMultiplier, 1.4);
+    });
+
+    globalThis.fetch = originalFetch;
   });
 
   console.log("\n=================================================");
