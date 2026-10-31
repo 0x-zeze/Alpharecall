@@ -193,7 +193,7 @@ Navigate to your GitHub repository -> **Settings** -> **Secrets and variables** 
 
 | Secret Name | Description | Example / Note |
 |---|---|---|
-| `APP_URL` | Base URL of your deployed application **without** trailing slash | `https://alpharecall.vercel.app` or your custom domain |
+| `APP_URL` | Base URL of your deployed application (must start with `https://`, without trailing slash) | `https://alpharecall.vercel.app` |
 | `CRON_SECRET` | The exact authorization secret configured in your Vercel / server environment | e.g. `your_production_cron_secret` |
 
 ### Manual Verification

@@ -29,7 +29,13 @@ jobs:
             echo "::error::Missing required secrets. Please configure APP_URL and CRON_SECRET in repository Settings -> Secrets and variables -> Actions."
             exit 1
           fi
-          echo "✓ Required secrets are configured."
+
+          if [[ "$APP_URL" != https://* ]]; then
+            echo "::error::APP_URL must start with https:// for secure transport."
+            exit 1
+          fi
+
+          echo "✓ Required secrets are configured and APP_URL uses HTTPS."
 
       - name: Trigger Automated Resolver API Endpoint
         env:
@@ -48,26 +54,29 @@ jobs:
             echo "=== Resolution Dispatch Attempt $ATTEMPT of $((MAX_RETRIES + 1)) ==="
 
             # Perform bounded GET request; output response to file, capture HTTP status code
+            # Use '|| echo "000"' to prevent set -e from aborting on curl transport failure (e.g. DNS error or timeout)
             HTTP_STATUS=$(curl -s -S -o response.json -w "%{http_code}" \
               -H "Authorization: Bearer $CRON_SECRET" \
               --max-time 60 \
-              "$ENDPOINT")
+              "$ENDPOINT" || echo "000")
+            # Normalize if curl already printed 000 before non-zero exit
+            [ "$HTTP_STATUS" = "000000" ] && HTTP_STATUS="000"
 
             echo "HTTP Status Code: $HTTP_STATUS"
 
-            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            if [ "$HTTP_STATUS" != "000" ] && [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
               echo "✓ Endpoint responded with success status $HTTP_STATUS."
               SUCCESS=1
               break
-            elif [ "$HTTP_STATUS" -eq 429 ]; then
+            elif [ "$HTTP_STATUS" != "000" ] && [ "$HTTP_STATUS" -eq 429 ]; then
               echo "ℹ Rate limit / Cooldown active (HTTP 429). Treating as successful cycle."
               SUCCESS=1
               break
-            elif [ "$HTTP_STATUS" -eq 401 ] || [ "$HTTP_STATUS" -eq 403 ]; then
+            elif [ "$HTTP_STATUS" != "000" ] && { [ "$HTTP_STATUS" -eq 401 ] || [ "$HTTP_STATUS" -eq 403 ]; }; then
               echo "::error::Authentication failed (HTTP $HTTP_STATUS): CRON_SECRET or APP_URL is invalid. Please verify repository secrets."
               exit 1
-            elif [ "$HTTP_STATUS" -ge 500 ]; then
-              echo "::warning::Server error (HTTP $HTTP_STATUS) encountered on attempt $ATTEMPT."
+            elif [ "$HTTP_STATUS" = "000" ] || [ "$HTTP_STATUS" -ge 500 ]; then
+              echo "::warning::Transport or server error (HTTP $HTTP_STATUS) encountered on attempt $ATTEMPT."
               if [ "$ATTEMPT" -le "$MAX_RETRIES" ]; then
                 BACKOFF_SEC=$((ATTEMPT * 5))
                 echo "Retrying in ${BACKOFF_SEC}s..."
