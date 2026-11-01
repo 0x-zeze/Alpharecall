@@ -1,6 +1,7 @@
 import type { PredictionRecord, PredictionStatus } from "./types";
 import { getTatumCryptoRate, getFallbackCryptoRate } from "./tatum";
 import { saveMemory, getAllMemories } from "./walrus";
+import { settleMarket, fetchEspnGameStatus } from "./sports-resolver";
 
 export const RESOLUTION_RULES = {
   WIN_HIGH_CONFIDENCE_DELTA: 8,
@@ -52,6 +53,9 @@ export interface ResolutionEvidence {
   fetchedAt: string;
   details?: string;
   oracleFallbackUsed?: boolean;
+  eventId?: string;
+  finalScore?: string;
+  statusName?: string;
 }
 
 export interface ResolutionResult {
@@ -67,7 +71,8 @@ export interface ResolutionResult {
     | "skipped"
     | "failed"
     | "manual_required"
-    | "batch_deferred";
+    | "batch_deferred"
+    | "pending_final";
   outcome?: PredictionStatus;
   delta?: number;
   reason?: string;
@@ -399,8 +404,186 @@ export async function resolveDuePredictions(
       continue;
     }
 
-    // B. Non-Crypto Predictions: manual resolution required
+    // B. Sports Predictions Resolution (when ENABLE_SPORTS_AUTORESOLVE is enabled)
     if (pred.sportType !== "crypto") {
+      const enableSportsAutoresolve = process.env.ENABLE_SPORTS_AUTORESOLVE === "true";
+
+      if (enableSportsAutoresolve && pred.fixture && pred.market) {
+        // Evaluate kickoff
+        const kickoffMs = Date.parse(pred.fixture.kickoff || pred.deadline || "");
+        if (isNaN(kickoffMs) || now < kickoffMs) {
+          results.push({
+            predictionId: pred.id,
+            analyst: pred.analyst,
+            target: pred.target,
+            pick: pred.pick,
+            status: "not_due",
+            reason: "Match has not kicked off yet.",
+          });
+          continue;
+        }
+
+        // Capped batch resolution
+        if (resolvedCount >= MAX_RESOLUTIONS_PER_BATCH) {
+          batchDeferredCount++;
+          results.push({
+            predictionId: pred.id,
+            analyst: pred.analyst,
+            target: pred.target,
+            pick: pred.pick,
+            status: "batch_deferred",
+            reason: `Batch limit reached (max ${MAX_RESOLUTIONS_PER_BATCH} resolutions per run). Deferred to next tick.`,
+          });
+          continue;
+        }
+
+        const gameStatus = await fetchEspnGameStatus(
+          pred.fixture.sport,
+          pred.fixture.league,
+          pred.fixture.eventId,
+          pred.fixture.kickoff
+        );
+
+        if (!gameStatus) {
+          results.push({
+            predictionId: pred.id,
+            analyst: pred.analyst,
+            target: pred.target,
+            pick: pred.pick,
+            status: "failed",
+            reason: "Could not fetch match status from ESPN public scoreboard.",
+          });
+          continue;
+        }
+
+        if (gameStatus.isVoid) {
+          results.push({
+            predictionId: pred.id,
+            analyst: pred.analyst,
+            target: pred.target,
+            pick: pred.pick,
+            status: "failed",
+            reason: `Match was cancelled, postponed, or suspended: ${gameStatus.statusDescription || gameStatus.statusName || "Void"}. No memory committed.`,
+          });
+          continue;
+        }
+
+        if (!gameStatus.completed || gameStatus.state !== "post" || !gameStatus.score) {
+          // Check if match is older than 3 days without completion
+          if (now - kickoffMs > 3 * 24 * 3600 * 1000) {
+            results.push({
+              predictionId: pred.id,
+              analyst: pred.analyst,
+              target: pred.target,
+              pick: pred.pick,
+              status: "expired-unresolved",
+              reason: "Match remained incomplete after 3 days. Marked as expired-unresolved.",
+            });
+          } else {
+            results.push({
+              predictionId: pred.id,
+              analyst: pred.analyst,
+              target: pred.target,
+              pick: pred.pick,
+              status: "pending_final",
+              reason: `Match is currently in progress or awaiting final score: ${gameStatus.statusDescription || gameStatus.statusName || "In Progress"}.`,
+            });
+          }
+          continue;
+        }
+
+        if (gameStatus.isOvertimeOrPenalties) {
+          results.push({
+            predictionId: pred.id,
+            analyst: pred.analyst,
+            target: pred.target,
+            pick: pred.pick,
+            status: "manual_required",
+            reason: `Soccer match went to Extra Time / Penalties (${gameStatus.statusDescription || "AET/PEN"}). Manual review required to avoid ambiguous settlement.`,
+          });
+          continue;
+        }
+
+        const marketOutcome = settleMarket(pred.market, gameStatus.score);
+        if (marketOutcome === "manual_required") {
+          results.push({
+            predictionId: pred.id,
+            analyst: pred.analyst,
+            target: pred.target,
+            pick: pred.pick,
+            status: "manual_required",
+            reason: "Market line or selection requires manual verification.",
+          });
+          continue;
+        }
+
+        const delta = calculateOutcomeDelta(marketOutcome, pred.confidence || 4);
+        const pnl = marketOutcome === "ACCURATE" ? Math.round(pred.stake * 0.91) : -pred.stake;
+
+        const resolvedRecord: Partial<PredictionRecord> & {
+          title: string;
+          content: string;
+          analyst: string;
+          target: string;
+          pick: string;
+          outcome: PredictionStatus;
+          credibilityDelta: number;
+        } = {
+          id: pred.id,
+          title: `${pred.target} [FINAL: ${gameStatus.score.home}-${gameStatus.score.away}]`,
+          content: `Resolved ${marketOutcome} (Final: ${gameStatus.score.home}-${gameStatus.score.away}, Pick: ${pred.pick}) via ESPN public scoreboard (unofficial)`,
+          analyst: pred.analyst,
+          target: pred.target,
+          pick: pred.pick,
+          outcome: marketOutcome,
+          credibilityDelta: delta,
+          pnl,
+          category: "audit",
+          sportType: pred.sportType,
+          stake: pred.stake,
+          confidence: pred.confidence,
+          deadline: pred.deadline,
+          fixture: pred.fixture,
+          market: pred.market,
+        };
+
+        try {
+          await saveMemory(resolvedRecord);
+          resolvedCount++;
+          alreadyResolvedIds.add(pred.id);
+          results.push({
+            predictionId: pred.id,
+            analyst: pred.analyst,
+            target: pred.target,
+            pick: pred.pick,
+            status: "resolved",
+            outcome: marketOutcome,
+            delta,
+            evidence: {
+              source: "espn-scoreboard (unofficial)",
+              method: "official_match_scorecard",
+              eventId: pred.fixture.eventId,
+              finalScore: `${gameStatus.score.home}-${gameStatus.score.away}`,
+              statusName: gameStatus.statusName,
+              fetchedAt: new Date(now).toISOString(),
+              details: `Official final score: ${gameStatus.score.home}-${gameStatus.score.away} reported by ESPN public scoreboard (unofficial).`,
+            },
+          });
+        } catch (saveErr: unknown) {
+          const errMsg = saveErr instanceof Error ? saveErr.message : "Error saving resolution to Walrus";
+          results.push({
+            predictionId: pred.id,
+            analyst: pred.analyst,
+            target: pred.target,
+            pick: pred.pick,
+            status: "failed",
+            reason: `Resolution determined (${marketOutcome}) but Walrus write failed: ${errMsg}`,
+          });
+        }
+        continue;
+      }
+
+      // Default sports behavior (no auto-resolve or manual fixture)
       results.push({
         predictionId: pred.id,
         analyst: pred.analyst,
