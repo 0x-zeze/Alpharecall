@@ -1,4 +1,10 @@
-import type { PredictionRecord, PredictionCategory, PredictionStatus } from "./types";
+import type {
+  PredictionRecord,
+  PredictionCategory,
+  PredictionStatus,
+  SportsFixtureRef,
+  SportsMarketRef,
+} from "./types";
 
 export const MEMORY_PREFIX = "ALPHARECALL_V1 ";
 
@@ -47,6 +53,10 @@ export interface MemoryPayloadV1 {
   suiCheckpoint?: string | null;
   suiCheckpointDigest?: string | null;
   suiCheckpointSource?: "tatum-grpc" | "tatum-gateway" | "sui-graphql" | null;
+
+  // FASE C: Optional Structured Sports Fixture & Market fields
+  fixture?: SportsFixtureRef;
+  market?: SportsMarketRef;
 }
 
 /**
@@ -97,6 +107,8 @@ export function encodeMemory(payload: MemoryPayloadV1): string {
     suiCheckpoint: payload.suiCheckpoint,
     suiCheckpointDigest: payload.suiCheckpointDigest,
     suiCheckpointSource: payload.suiCheckpointSource,
+    fixture: payload.fixture,
+    market: payload.market,
   };
 
   return `${MEMORY_PREFIX}${JSON.stringify(normalized)}`;
@@ -174,6 +186,36 @@ export function decodeMemory(rawText: string | null | undefined): MemoryPayloadV
       ? (obj.suiCheckpointSource as "tatum-grpc" | "tatum-gateway" | "sui-graphql")
       : null;
 
+  // FASE C: Optional Structured Sports Fixture & Market (tolerantly parsed)
+  let fixture: SportsFixtureRef | undefined = undefined;
+  if (obj.fixture && typeof obj.fixture === "object") {
+    const f = obj.fixture as Record<string, unknown>;
+    if (
+      f.provider === "espn" &&
+      typeof f.eventId === "string" &&
+      (f.sport === "nba" || f.sport === "soccer") &&
+      typeof f.league === "string" &&
+      typeof f.kickoff === "string" &&
+      f.home &&
+      typeof f.home === "object" &&
+      f.away &&
+      typeof f.away === "object"
+    ) {
+      fixture = obj.fixture as SportsFixtureRef;
+    }
+  }
+
+  let market: SportsMarketRef | undefined = undefined;
+  if (obj.market && typeof obj.market === "object") {
+    const m = obj.market as Record<string, unknown>;
+    if (
+      (m.type === "moneyline" || m.type === "total") &&
+      ["home", "away", "draw", "over", "under"].includes(String(m.selection))
+    ) {
+      market = obj.market as SportsMarketRef;
+    }
+  }
+
   return {
     version: "1.0",
     type: obj.type === "prediction" ? "prediction" : "resolution",
@@ -202,6 +244,8 @@ export function decodeMemory(rawText: string | null | undefined): MemoryPayloadV
     suiCheckpoint,
     suiCheckpointDigest,
     suiCheckpointSource,
+    fixture,
+    market,
   };
 }
 
@@ -246,6 +290,8 @@ export function payloadToPredictionRecord(
     suiCheckpoint: payload.suiCheckpoint,
     suiCheckpointDigest: payload.suiCheckpointDigest,
     suiCheckpointSource: payload.suiCheckpointSource,
+    fixture: payload.fixture,
+    market: payload.market,
   };
 }
 
@@ -283,5 +329,7 @@ export function predictionRecordToPayload(record: PredictionRecord): MemoryPaylo
     suiCheckpoint: record.suiCheckpoint,
     suiCheckpointDigest: record.suiCheckpointDigest,
     suiCheckpointSource: record.suiCheckpointSource,
+    fixture: record.fixture,
+    market: record.market,
   };
 }

@@ -2,6 +2,30 @@ export type PredictionCategory = "soccer" | "nba" | "crypto" | "sports";
 export type PredictionStatus = "PENDING" | "ACCURATE" | "FAILED";
 export type MemoryWriteStatus = "confirmed" | "pending" | "failed" | "local-demo";
 
+export interface SportsTeamRef {
+  id: string;
+  name: string;
+  abbr?: string;
+  logo?: string | null;
+}
+
+export interface SportsFixtureRef {
+  provider: "espn";
+  eventId: string;
+  sport: "nba" | "soccer";
+  league: string;
+  leagueLabel: string;
+  kickoff: string; // ISO-8601 string
+  home: SportsTeamRef;
+  away: SportsTeamRef;
+}
+
+export interface SportsMarketRef {
+  type: "moneyline" | "total";
+  selection: "home" | "away" | "draw" | "over" | "under";
+  line?: number;
+}
+
 export interface PredictionRecord {
   id: string;
   category: "prediction" | "audit" | "analyst_score" | "market_insight";
@@ -39,6 +63,10 @@ export interface PredictionRecord {
   suiCheckpointDigest?: string | null;
   suiCheckpointSource?: "tatum-grpc" | "tatum-gateway" | "sui-graphql" | null;
   oracleFallbackUsed?: boolean;
+
+  // FASE C: Optional Structured Sports Fixture & Market fields
+  fixture?: SportsFixtureRef;
+  market?: SportsMarketRef;
 }
 
 export interface ForecasterStats {

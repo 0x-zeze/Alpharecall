@@ -17,6 +17,8 @@ import {
   TatumGatewayStatus,
   SuiChainStatus,
   PredictionCategory,
+  SportsFixtureRef,
+  SportsMarketRef,
 } from "@/lib/types";
 import { Sparkles } from "lucide-react";
 
@@ -140,12 +142,14 @@ export default function Home() {
     stake: number;
     analyst: string;
     confidence: number;
-    reasoning: string;
+    reasoning?: string;
     deadline?: string;
     direction?: "above" | "below";
     targetPrice?: number;
     asset?: string;
     clientRequestId?: string;
+    fixture?: SportsFixtureRef;
+    market?: SportsMarketRef;
   }) => {
     try {
       const res = await fetch("/api/memories", {
@@ -167,6 +171,8 @@ export default function Home() {
           targetPrice: data.targetPrice,
           asset: data.asset,
           clientRequestId: data.clientRequestId,
+          fixture: data.fixture,
+          market: data.market,
         }),
       });
 

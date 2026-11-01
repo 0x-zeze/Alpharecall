@@ -16,11 +16,18 @@ import {
   Shield,
   Calendar,
 } from "lucide-react";
-import { PredictionRecord, PredictionCategory, PredictionStatus } from "@/lib/types";
+import {
+  PredictionRecord,
+  PredictionCategory,
+  PredictionStatus,
+  SportsFixtureRef,
+  SportsMarketRef,
+} from "@/lib/types";
 import { AddPredictionSlideOver } from "./AddPredictionSlideOver";
 import { getWalrusBlobExplorerUrl } from "@/lib/explorer";
 import { isBacktestRecord } from "@/lib/dashboard-stats";
 import { CoinLogo } from "@/components/ui/CoinLogo";
+import { TeamLogo } from "@/components/ui/TeamLogo";
 
 interface JournalViewProps {
   predictions: PredictionRecord[];
@@ -32,12 +39,14 @@ interface JournalViewProps {
     stake: number;
     analyst: string;
     confidence: number;
-    reasoning: string;
+    reasoning?: string;
     deadline?: string;
     direction?: "above" | "below";
     targetPrice?: number;
     asset?: string;
     clientRequestId?: string;
+    fixture?: SportsFixtureRef;
+    market?: SportsMarketRef;
   }) => Promise<{ success: boolean; error?: string } | void>;
   onRefresh?: () => Promise<void> | void;
 }
@@ -186,12 +195,28 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                   <div className="min-w-0">
                     <div className="text-[10px] text-[var(--muted)] font-mono-num">{pred.dateStr}</div>
                     <div className="font-semibold text-sm text-[var(--text)] break-words flex items-center gap-1.5 mt-0.5">
-                      {pred.sportType === "crypto" && (
+                      {pred.sportType === "crypto" ? (
                         <CoinLogo
                           symbol={pred.asset || (pred.target.includes("SUI") ? "SUI" : pred.target.includes("BTC") ? "BTC" : pred.target.includes("ETH") ? "ETH" : "")}
                           size={16}
                         />
-                      )}
+                      ) : pred.fixture?.home && pred.fixture?.away ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <TeamLogo
+                            logo={pred.fixture.home.logo}
+                            name={pred.fixture.home.name}
+                            abbr={pred.fixture.home.abbr}
+                            size={16}
+                          />
+                          <span className="text-[10px] text-[var(--muted)]">@</span>
+                          <TeamLogo
+                            logo={pred.fixture.away.logo}
+                            name={pred.fixture.away.name}
+                            abbr={pred.fixture.away.abbr}
+                            size={16}
+                          />
+                        </div>
+                      ) : null}
                       <span>{pred.target}</span>
                     </div>
                     <div className="text-xs text-[var(--muted)] mt-0.5 break-words">{pred.pick}</div>
@@ -307,12 +332,28 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                         {/* Market / Event */}
                         <td className="py-3 px-4 font-semibold text-[var(--text)] max-w-xs truncate">
                           <div className="flex items-center gap-1.5">
-                            {pred.sportType === "crypto" && (
+                            {pred.sportType === "crypto" ? (
                               <CoinLogo
                                 symbol={pred.asset || (pred.target.includes("SUI") ? "SUI" : pred.target.includes("BTC") ? "BTC" : pred.target.includes("ETH") ? "ETH" : "")}
                                 size={16}
                               />
-                            )}
+                            ) : pred.fixture?.home && pred.fixture?.away ? (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <TeamLogo
+                                  logo={pred.fixture.home.logo}
+                                  name={pred.fixture.home.name}
+                                  abbr={pred.fixture.home.abbr}
+                                  size={16}
+                                />
+                                <span className="text-[10px] text-[var(--muted)]">@</span>
+                                <TeamLogo
+                                  logo={pred.fixture.away.logo}
+                                  name={pred.fixture.away.name}
+                                  abbr={pred.fixture.away.abbr}
+                                  size={16}
+                                />
+                              </div>
+                            ) : null}
                             <span className="truncate">{pred.target}</span>
                             {isHistoricalBacktest ? (
                               <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0">
