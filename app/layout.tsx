@@ -29,8 +29,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "WalRecall — Decentralized Prediction Intelligence Terminal",
-  description: "Liquid Glass decentralized prediction intelligence platform powered by Tatum Sui gRPC and Walrus Memory on Mainnet.",
+  title: "WalRecall — Prediction Journal & Credibility Engine",
+  description: "Prediction journal and forecaster credibility engine powered by Walrus Memory and Sui Mainnet.",
 };
 
 export default function RootLayout({

@@ -356,7 +356,7 @@ export function AddPredictionSlideOver({
                   Commit New Forecast
                 </h3>
                 <p className="text-xs text-[var(--muted)] font-mono-num mt-0.5">
-                  Direct cryptographic write to Walrus Memory
+                  Saved to Walrus Memory
                 </p>
               </div>
               <button
@@ -944,12 +944,12 @@ export function AddPredictionSlideOver({
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Committing to Walrus Mainnet...</span>
+                    <span>Saving to Walrus Memory...</span>
                   </>
                 ) : (
                   <>
                     <Shield className="w-4 h-4" />
-                    <span>Commit Immutable Memory</span>
+                    <span>Save to Walrus Memory</span>
                   </>
                 )}
               </button>
