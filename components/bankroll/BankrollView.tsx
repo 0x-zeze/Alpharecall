@@ -49,18 +49,18 @@ export function BankrollView() {
   return (
     <div className="space-y-4">
       {/* Top Header Card */}
-      <div className="bento-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="liquid-glass p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Wallet className="w-5 h-5 text-[var(--accent)]" />
-            <h2 className="text-lg font-bold text-[var(--text)]">Simulated bankroll</h2>
+            <Wallet className="w-5 h-5 text-[var(--accent-violet)]" />
+            <h2 className="text-lg font-heading font-bold text-[var(--text)]">Portfolio & Bankroll Telemetry</h2>
           </div>
           <p className="text-xs text-[var(--muted)] max-w-2xl">
             Stake helper below uses a named simulated starting bankroll. The curve and ledger are a demo sample, not live cash.
           </p>
         </div>
 
-        <div className="flex items-center gap-4 bg-[var(--border-subtle)] px-4 py-2.5 rounded-[10px] border border-[var(--border)] font-mono-num text-xs">
+        <div className="flex items-center gap-4 bg-[var(--glass-surface-1)] px-4 py-2.5 rounded-xl border border-[var(--border)] font-mono-num text-xs backdrop-blur-sm">
           <span className="text-[11px] font-medium text-amber-400">Simulated</span>
         </div>
       </div>

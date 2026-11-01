@@ -96,7 +96,7 @@ export function CredibilityView({
 
       {/* Empty State */}
       {forecasters.length === 0 ? (
-        <div className="bento-card p-12 text-center text-xs font-mono-num text-[var(--muted)] space-y-3">
+        <div className="liquid-glass p-12 text-center text-xs font-mono-num text-[var(--muted)] space-y-3">
           <Inbox className="w-10 h-10 mx-auto text-[var(--muted)]/40" />
           <h3 className="font-bold text-sm text-[var(--text)]">No Forecaster Memory Records Found</h3>
           <p className="max-w-md mx-auto text-[var(--muted)]">
@@ -210,7 +210,7 @@ export function CredibilityView({
       )}
 
       {/* Pure Consensus Demonstration: Before vs After Memory */}
-      <div className="bento-card p-6 space-y-4">
+      <div className="liquid-glass p-6 space-y-4">
         <BentoHeader
           title="Consensus Engine: Unweighted vs Memory-Weighted"
           subtitle={`Live consensus calculation on open fixture: "${consensusComparison.market}"`}
@@ -302,7 +302,7 @@ export function CredibilityView({
       </div>
 
       {/* Memory Recall Live Feed */}
-      <div className="bento-card p-6 space-y-4">
+      <div className="liquid-glass p-6 space-y-4">
         <BentoHeader
           title="Memory records"
           subtitle="Shown records. On-chain count is only rows with a blob id."

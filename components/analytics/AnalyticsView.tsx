@@ -48,18 +48,18 @@ export function AnalyticsView() {
   return (
     <div className="space-y-4">
       {/* Top Overview Banner */}
-      <div className="bento-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="liquid-glass p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <BarChart3 className="w-5 h-5 text-[var(--accent)]" />
-            <h2 className="text-lg font-bold text-[var(--text)]">Analytics sample charts</h2>
+            <BarChart3 className="w-5 h-5 text-[var(--accent-violet)]" />
+            <h2 className="text-lg font-heading font-bold text-[var(--text)]">Analytics Intelligence</h2>
           </div>
           <p className="text-xs text-[var(--muted)] max-w-2xl">
             These charts are a fixed demo sample. They are not computed from the current journal.
           </p>
         </div>
 
-        <div className="flex items-center gap-4 bg-[var(--border-subtle)] px-4 py-2 rounded-[10px] border border-[var(--border)] font-mono-num text-xs">
+        <div className="flex items-center gap-4 bg-[var(--glass-surface-1)] px-4 py-2 rounded-xl border border-[var(--border)] font-mono-num text-xs backdrop-blur-sm">
           <span className="text-[11px] font-medium text-amber-400">Simulated sample</span>
         </div>
       </div>

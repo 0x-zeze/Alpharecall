@@ -116,7 +116,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
             placeholder="Search fixtures, picks, forecasters..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-[8px] bg-[var(--card)] border border-[var(--border)] text-xs font-mono-num text-[var(--text)] placeholder:text-[var(--muted)]/60 focus:border-[var(--accent)] focus:outline-none"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-[var(--glass-surface-1)] backdrop-blur-sm border border-[var(--border)] text-xs font-mono-num text-[var(--text)] placeholder:text-[var(--muted)]/60 focus:border-[var(--accent-violet)] focus:outline-none transition-all duration-250"
           />
         </div>
 
@@ -126,7 +126,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as "all" | PredictionCategory)}
-            className="px-2.5 py-2 rounded-[8px] bg-[var(--bg)] border border-[var(--border)] text-xs font-mono-num text-[var(--text)] focus:border-[var(--accent)] focus:outline-none"
+            className="px-2.5 py-2.5 rounded-xl bg-[var(--glass-surface-1)] border border-[var(--border)] text-xs font-mono-num text-[var(--text)] focus:border-[var(--accent-violet)] focus:outline-none transition-all duration-250"
           >
             <option value="all">All Sectors</option>
             <option value="crypto">Crypto (Sui/BTC/ETH)</option>
@@ -138,7 +138,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as "all" | PredictionStatus)}
-            className="px-2.5 py-2 rounded-[8px] bg-[var(--bg)] border border-[var(--border)] text-xs font-mono-num text-[var(--text)] focus:border-[var(--accent)] focus:outline-none"
+            className="px-2.5 py-2.5 rounded-xl bg-[var(--glass-surface-1)] border border-[var(--border)] text-xs font-mono-num text-[var(--text)] focus:border-[var(--accent-violet)] focus:outline-none transition-all duration-250"
           >
             <option value="all">All Outcomes</option>
             <option value="ACCURATE">Accurate (Wins)</option>
@@ -150,7 +150,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
           <button
             onClick={handleCheckResultsNow}
             disabled={isResolving}
-            className="flex items-center gap-1.5 py-2 px-3 rounded-[8px] bg-[var(--card)] border border-[var(--border)] text-[var(--text)] font-mono-num font-semibold text-xs hover:border-[var(--accent)] hover:text-[var(--accent)] transition shrink-0 disabled:opacity-50"
+            className="flex items-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-[var(--glass-surface-2)] backdrop-blur-sm border border-[var(--border)] text-[var(--text)] font-mono-num font-semibold text-xs hover:border-[var(--accent)]/40 hover:text-[var(--accent)] transition-all duration-250 shrink-0 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isResolving ? "animate-spin text-[var(--accent)]" : ""}`} />
             <span>{isResolving ? "Checking..." : "Check results now"}</span>
@@ -159,7 +159,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
           {/* Log New Prediction CTA */}
           <button
             onClick={() => setIsSlideOverOpen(true)}
-            className="flex items-center gap-2 py-2 px-3.5 rounded-[8px] bg-[var(--accent)] text-[#0a0a0b] font-mono-num font-bold text-xs hover:opacity-90 transition shrink-0 ml-auto sm:ml-0"
+            className="flex items-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent)] text-white font-mono-num font-bold text-xs hover:shadow-[0_0_20px_-4px_var(--accent-violet)] transition-all duration-250 shrink-0 ml-auto sm:ml-0"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Forecast</span>
@@ -168,7 +168,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
       </div>
 
       {resolveFeedback && (
-        <div className="p-2.5 rounded-[8px] bg-[var(--card)] border border-[var(--accent)]/30 text-xs font-mono-num text-[var(--accent)] flex items-center justify-between">
+        <div className="p-3 rounded-xl bg-[var(--glass-surface-2)] backdrop-blur-sm border border-[var(--accent)]/30 text-xs font-mono-num text-[var(--accent)] flex items-center justify-between">
           <span>{resolveFeedback}</span>
           <button onClick={() => setResolveFeedback(null)} className="text-[var(--muted)] hover:text-[var(--text)]">✕</button>
         </div>
@@ -177,7 +177,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
       {/* Mobile cards — table is desktop-only */}
       <div className="md:hidden space-y-3">
         {filteredPredictions.length === 0 ? (
-          <div className="bento-card p-8 text-center text-[var(--muted)] text-xs">
+          <div className="liquid-glass p-8 text-center text-[var(--muted)] text-xs">
             No matching predictions found.
           </div>
         ) : (
@@ -189,7 +189,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                 key={`${pred.id}-card-${idx}`}
                 type="button"
                 onClick={() => toggleRow(pred.id)}
-                className="bento-card w-full text-left p-4 space-y-2"
+                className="liquid-glass w-full text-left p-4 space-y-2"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -272,10 +272,10 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
       </div>
 
       {/* Desktop table */}
-      <div className="bento-card overflow-hidden hidden md:block">
+      <div className="liquid-glass overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono-num border-collapse">
-            <thead className="bg-[var(--border-subtle)] text-[var(--muted)] uppercase border-b border-[var(--border)] text-[10px] select-none">
+            <thead className="bg-[var(--glass-surface-1)] text-[var(--muted)] uppercase border-b border-[var(--border)] text-[10px] select-none">
               <tr>
                 <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4">Sector</th>
@@ -305,8 +305,8 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                     <React.Fragment key={`${pred.id}-${pred.writeStatus}-${idx}`}>
                       <tr
                         onClick={() => toggleRow(pred.id)}
-                        className={`hover:bg-[var(--border-subtle)]/50 transition cursor-pointer ${
-                          isExpanded ? "bg-[var(--border-subtle)]/40" : ""
+                        className={`hover:bg-[var(--glass-surface-1)] transition-all duration-250 cursor-pointer ${
+                          isExpanded ? "bg-[var(--glass-surface-1)]" : ""
                         }`}
                       >
                         {/* Date */}
@@ -430,7 +430,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
 
                       {/* Inline Expanded Detail Drawer with AnimatePresence */}
                       {isExpanded && (
-                        <tr className="bg-[var(--border-subtle)]/30">
+                        <tr className="bg-[var(--glass-surface-1)]">
                           <td colSpan={10} className="p-0">
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
@@ -468,7 +468,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                                 </div>
 
                                 {/* Metadata & Verification Details */}
-                                <div className="space-y-2 p-3 rounded-[10px] bg-[var(--card)] border border-[var(--border)] text-xs">
+                                <div className="space-y-2 p-3 rounded-xl bg-[var(--glass-surface-2)] backdrop-blur-sm border border-[var(--border)] text-xs">
                                   <div className="flex items-center justify-between">
                                     <span className="text-[var(--muted)] text-[11px]">Confidence</span>
                                     <div className="flex items-center gap-0.5 text-amber-400">

@@ -342,7 +342,7 @@ export function AddPredictionSlideOver({
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[var(--card)] border-l border-[var(--border)] shadow-2xl flex flex-col p-6 overflow-y-auto"
+            className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[var(--bg)]/95 backdrop-blur-2xl border-l border-[var(--border)] shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col p-6 overflow-y-auto"
           >
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-[var(--border)] mb-5">
