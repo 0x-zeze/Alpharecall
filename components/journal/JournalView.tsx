@@ -19,6 +19,7 @@ import {
 import { PredictionRecord, PredictionCategory, PredictionStatus } from "@/lib/types";
 import { AddPredictionSlideOver } from "./AddPredictionSlideOver";
 import { getWalrusBlobExplorerUrl } from "@/lib/explorer";
+import { isBacktestRecord } from "@/lib/dashboard-stats";
 
 interface JournalViewProps {
   predictions: PredictionRecord[];
@@ -171,7 +172,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
         ) : (
           filteredPredictions.map((pred, idx) => {
             const isExpanded = expandedRowId === pred.id;
-            const isHistoricalBacktest = pred.id.startsWith("rec-");
+            const isHistoricalBacktest = isBacktestRecord(pred);
             return (
               <button
                 key={`${pred.id}-card-${idx}`}
@@ -261,7 +262,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
               ) : (
                 filteredPredictions.map((pred, idx) => {
                   const isExpanded = expandedRowId === pred.id;
-                  const isHistoricalBacktest = pred.id.startsWith("rec-");
+                  const isHistoricalBacktest = isBacktestRecord(pred);
 
                   return (
                     <React.Fragment key={`${pred.id}-${pred.writeStatus}-${idx}`}>

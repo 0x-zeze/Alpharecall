@@ -3,8 +3,17 @@ import type { PredictionRecord } from "./types";
 /** Named simulated starting bankroll. Not a live balance. */
 export const SIMULATED_STARTING_BANKROLL = 10000;
 
-export function isBacktestRecord(record: PredictionRecord): boolean {
-  return record.source === "demo" || record.id.startsWith("rec-");
+/**
+ * Identifies if a record is a historical backtest seed.
+ * A record is historical backtest ONLY IF:
+ * 1. Its source is explicitly "demo", OR
+ * 2. Its id matches the 16 canonical historical seeds (rec-01 .. rec-16).
+ * Live forecasts (e.g. rec-1730000000000 or live-...) are strictly considered live.
+ */
+export function isBacktestRecord(record: { id?: string; source?: string }): boolean {
+  if (record.source === "demo") return true;
+  if (!record.id) return false;
+  return /^rec-(0[1-9]|1[0-6])$/.test(record.id);
 }
 
 export function countLiveVsBacktest(records: PredictionRecord[]): {

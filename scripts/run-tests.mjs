@@ -33,6 +33,8 @@ import {
   countOnChainBlobs,
   currentWinStreak,
   simulatedBalance,
+  isBacktestRecord,
+  countLiveVsBacktest,
 } from "../lib/dashboard-stats.ts";
 
 let passed = 0;
@@ -1382,6 +1384,41 @@ async function main() {
         rec("c", "FAILED", -10, 3, 100, ""),
       ];
       assert.equal(countOnChainBlobs(rows), 1);
+    });
+
+    await it("isBacktestRecord classifies historical seeds vs live forecasts accurately", () => {
+      // Historical seeds rec-01 to rec-16
+      assert.equal(isBacktestRecord({ id: "rec-01", source: "walrus" }), true);
+      assert.equal(isBacktestRecord({ id: "rec-16", source: "walrus" }), true);
+      assert.equal(isBacktestRecord({ id: "rec-07" }), true);
+
+      // Old live forecasts generated with timestamp
+      assert.equal(isBacktestRecord({ id: "rec-1730000000000", source: "walrus" }), false);
+      assert.equal(isBacktestRecord({ id: "rec-1730999999999" }), false);
+
+      // New live forecasts with live- prefix
+      assert.equal(isBacktestRecord({ id: "live-xyz123", source: "walrus" }), false);
+      assert.equal(isBacktestRecord({ id: "live-1730000000000" }), false);
+
+      // Source demo is always historical
+      assert.equal(isBacktestRecord({ id: "live-local", source: "demo" }), true);
+      assert.equal(isBacktestRecord({ id: "custom-id", source: "demo" }), true);
+    });
+
+    await it("countLiveVsBacktest returns correct counts for mixed datasets", () => {
+      const mixed = [
+        { id: "rec-01", source: "walrus" },
+        { id: "rec-02", source: "walrus" },
+        { id: "rec-1730000000000", source: "walrus" },
+        { id: "rec-1730000000001", source: "walrus" },
+        { id: "live-alpha", source: "walrus" },
+        { id: "rec-legacy-demo", source: "demo" },
+      ];
+      const counts = countLiveVsBacktest(mixed);
+      // Historical: rec-01, rec-02, rec-legacy-demo (3)
+      // Live: rec-1730000000000, rec-1730000000001, live-alpha (3)
+      assert.equal(counts.backtest, 3);
+      assert.equal(counts.live, 3);
     });
   });
 
