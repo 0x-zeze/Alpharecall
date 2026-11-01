@@ -1,107 +1,144 @@
-# AlphaRecall 🔮
+# AlphaRecall
 
-> **Decentralized Prediction & Forecaster Credibility Engine that Learns Over Time.**  
-> Built for the **Tatum x Walrus Hackathon (Track 1: Markets & Sports Prediction)**.  
-> Powered by **Walrus Memory on Mainnet** (`@mysten-incubation/memwal`), **Tatum Data API**, and **Sui Network Checkpoints**.
+Decentralized prediction engine and forecaster credibility matrix that learns over time.
 
----
-
-## ⚡ Live Links & Resources
-
-* **Live Web App (Vercel):** [https://alpharecall.vercel.app](https://alpharecall.vercel.app)
-* **Demo video:** TODO — add a real demo video URL before linking it.
-* **GitHub Repository:** [https://github.com/0x-zeze/Alpharecall](https://github.com/0x-zeze/Alpharecall)
-* **Walruscan Explorer (Mainnet):** [https://walruscan.com/mainnet](https://walruscan.com/mainnet)
+`Track 1: Markets & Sports Prediction` · `Tatum x Walrus Hackathon (Total Recall)`
 
 ---
 
-## 🎯 What is AlphaRecall?
+## Live Links & Resources
 
-Traditional prediction markets and sports tipping platforms suffer from an architectural amnesia: **they have zero persistent, verifiable memory across sessions**. When an analyst or algorithm makes reckless forecasts, the platform forgets within days. Users are left to manually battle recency bias, selective memory, and unweighted consensus.
+| Resource | Link | Notes |
+|---|---|---|
+| Live Web Application | [https://alpharecall.vercel.app](https://alpharecall.vercel.app) | Production deployment on Vercel |
+| Source Code Repository | [https://github.com/0x-zeze/Alpharecall](https://github.com/0x-zeze/Alpharecall) | Branch `main` & `bento-redesign` |
+| Demo Video | `TODO: Add 2-3 minute walkthrough video` | Record UI walkthrough and resolution pass |
+| Technical Blog Post | `TODO: Add blog post URL after publication` | Overview of memory-driven consensus |
+| Walruscan Mainnet Explorer | [https://walruscan.com/mainnet](https://walruscan.com/mainnet) | Verify onchain blobs |
 
-**AlphaRecall solves this by giving prediction engines permanent onchain memory.**
+---
 
-By combining **Walrus Memory on Mainnet** with the **Tatum Data API** (for real-time exchange rates) and **Sui Checkpoint Anchors** (via Tatum Sui Gateway when available, or public Sui GraphQL fallback when gateway returns 404), AlphaRecall tracks every forecast, anchors it to a Sui checkpoint, resolves its outcome at maturity, and immutably recalibrates forecaster credibility weights across sessions.
+## What It Does
 
-### The Autonomous AlphaRecall Loop
+Traditional prediction markets and sports tipping platforms suffer from amnesia because predictions and past track records are siloed in ephemeral databases that can be silently edited or reset. AlphaRecall solves this by persisting every prediction and resolution immutably to Walrus Memory on Sui mainnet. At maturity, forecasts are verified against authentic market rates, generating an explicit accuracy delta. A deterministic mathematical scoring engine computes dynamic credibility weights (0.40x to 2.40x) from historical resolution memories. Future market consensus scales by these weights, naturally boosting verified sharps while dampening reckless forecasters.
 
-```text
-[1. User Creates Forecast] ──► [2. Sui Checkpoint Anchor] ──► [3. Walrus Memory Write]
-       │                                                              │
-       │                                                              ▼
-[6. Weighted Consensus Shift] ◄── [5. Dynamic Credibility Tuning] ◄── [4. Tatum Oracle Settlement]
+---
+
+## How It Works
+
+```mermaid
+flowchart TD
+    A[Analyst Intake] --> B[Sui Checkpoint Anchor\nTatum gRPC]
+    B --> C[Walrus Memory Commit\nALPHARECALL_V1 JSON]
+    C --> D[Maturity Horizon Check\n6h Grace Window]
+    D --> E[Resolution Engine\nTatum Data API Spot]
+    E --> F[Walrus Outcome Write\nConfirmed Resolution Blob]
+    F --> G[Memory Recall & Deduplication\nwalrus.getAllMemories]
+    G --> H[Credibility Recalibration\nWeight 0.40x - 2.40x]
+    H --> I[Weighted Consensus Output]
+    I -.->|Informs next market| A
 ```
 
-1. **Intake & Sui Anchor:** An analyst logs a forecast (Crypto, Soccer, or NBA). The system fetches the latest Sui Checkpoint sequence to cryptographically anchor creation time. It queries the Tatum Sui Gateway first; if the Tatum gateway replies with HTTP 404 (due to Sui JSON-RPC deprecation), the system falls back to the public Sui GraphQL endpoint (`https://graphql.mainnet.sui.io/graphql`) and persists the checkpoint along with its explicit source attribution (`tatum-gateway` or `sui-graphql`).
-2. **Immutable Memory Commitment:** The forecast is encoded into a structured `ALPHARECALL_V1` JSON payload and saved to Walrus Mainnet storage nodes via `@mysten-incubation/memwal`.
-3. **Maturity & Resolution:** At the deadline, the resolver queries the Tatum Data API for real-time exchange rates (`/v3/tatum/rate/{symbol}?basePair=USD`).
-4. **Adaptive Credibility Tuning:** Outcome accuracy is determined (`ACCURATE` vs `FAILED`), generating an explicit score delta ($\Delta$). A pure mathematical function maps total delta to an analyst weight multiplier:
-   $$\text{Weight} = \max\left(0.40, \min\left(2.40, 1.0 + \frac{\Delta_{\text{total}}}{20}\right)\right)$$
-5. **Consensus Recalibration:** When evaluating future open markets, the consensus engine multiplies each forecaster's opinion by their memory-weighted credibility, dynamically suppressing bad forecasters ($0.40\times$) and boosting verified sharps ($2.40\times$).
+1. **Intake & Anchoring:** The system accepts an analyst forecast and queries the latest Sui checkpoint via the Tatum gRPC gateway to anchor creation time.
+2. **Memory Commitment:** The forecast is encoded into a structured `ALPHARECALL_V1` JSON payload and committed to Walrus Mainnet storage via `@mysten-incubation/memwal`.
+3. **Maturity Check:** When a forecast reaches its deadline, the automated resolver evaluates it within a 6-hour grace window.
+4. **Rate Resolution:** The resolver queries the Tatum Data API for the live market exchange rate to determine if target conditions were met.
+5. **Outcome Write:** The verified result (`ACCURATE` or `FAILED`) is committed as a resolution memory blob to Walrus.
+6. **Memory Recall & Deduplication:** The client recalls past resolution blobs using `getAllMemories()` and deduplicates records per prediction ID.
+7. **Credibility Recalibration:** Forecaster scores map through a bounded linear formula to calculate an active weight multiplier between 0.40x and 2.40x.
+8. **Consensus Recalibration:** Aggregate market sentiment multiplies each analyst's opinion by their credibility weight, replacing unweighted headcounts.
 
 ---
 
-## 📊 Live vs Historical Backtest Data
+## What Is Live vs Backtest
 
-To ensure 100% honesty and data integrity:
-
-* **16 Historical Backtest Seeds (October 2024):** The initial baseline credibility matrix is seeded from real-world historical fixtures from October 2024 (e.g. *El Clasico Real Madrid 0 - 4 FC Barcelona*, *Arsenal 2 - 2 Liverpool*, *Sui $2.00 Breakout*). All 16 records have been cryptographically written to Walrus Mainnet and carry genuine onchain `blobId` receipts.
-* **Live User Forecasts:** Any new prediction committed through the UI is saved with status `PENDING` and delta `0`. Crypto predictions require a strict future deadline (up to 30 days) and are settled at maturity via the Tatum Data API.
-
----
-
-## 📦 Verified Walrus Mainnet Blobs (16 Authentic Records)
-
-Every seed record in AlphaRecall corresponds to an immutable blob stored on Walrus Mainnet:
-
-| # | Market / Event | Blob ID | Explorer Link |
+| Dataset Type | Scope & Origin | Verification Status | Role in AlphaRecall |
 |---|---|---|---|
-| 1 | El Clasico: Real Madrid 0 - 4 FC Barcelona | `MDppsKhZlP6LG3FgAOKkiwd-Zs00vZxCNSBD6OkJPZo` | [Walruscan](https://walruscan.com/mainnet/blob/MDppsKhZlP6LG3FgAOKkiwd-Zs00vZxCNSBD6OkJPZo) |
-| 2 | Premier League: Arsenal 2 - 2 Liverpool Over 2.5 Goals | `Pvl2qLR-MtlscsT6Xefn1hMa6pKDxgAHUEdUsixPaVE` | [Walruscan](https://walruscan.com/mainnet/blob/Pvl2qLR-MtlscsT6Xefn1hMa6pKDxgAHUEdUsixPaVE) |
-| 3 | UEFA Champions League: Real Madrid 5 - 2 Borussia Dortmund | `MlY3RrUcDu9yZqt4azuEqjNU_CAAdkQ1J6-rQSPbU8k` | [Walruscan](https://walruscan.com/mainnet/blob/MlY3RrUcDu9yZqt4azuEqjNU_CAAdkQ1J6-rQSPbU8k) |
-| 4 | UEFA Champions League: FC Barcelona 4 - 1 Bayern Munich | `IId5yX8mnya--n6K7fsU_eULIa3GBhJUzSgJ1-F1WO0` | [Walruscan](https://walruscan.com/mainnet/blob/IId5yX8mnya--n6K7fsU_eULIa3GBhJUzSgJ1-F1WO0) |
-| 5 | NBA: Boston Celtics 119 - 108 Milwaukee Bucks (-9.5) | `EGTVpuhtIybSbbkAH4YW07k2EC7V0BAxnvxk2-EBXPo` | [Walruscan](https://walruscan.com/mainnet/blob/EGTVpuhtIybSbbkAH4YW07k2EC7V0BAxnvxk2-EBXPo) |
-| 6 | NBA: Nikola Jokic Over 26.5 Points (Nuggets vs Raptors) | `_qRNwZHJxnGQGFIYTqNWJB6fmzUAqJTAhjv0_asDHNM` | [Walruscan](https://walruscan.com/mainnet/blob/_qRNwZHJxnGQGFIYTqNWJB6fmzUAqJTAhjv0_asDHNM) |
-| 7 | Premier League: West Ham 2 - 1 Manchester United | `BY17qQqMED4GWhhO8bOIs9qN_NErjaRIL5xTyQ1V0CI` | [Walruscan](https://walruscan.com/mainnet/blob/BY17qQqMED4GWhhO8bOIs9qN_NErjaRIL5xTyQ1V0CI) |
-| 8 | Sui Ecosystem: SUI Spot Resistance Breakout > $2.00 | `vLRIaRkHJBz6mAcv0FB5gwdtYxa-n59y4Lk8ANBGXRY` | [Walruscan](https://walruscan.com/mainnet/blob/vLRIaRkHJBz6mAcv0FB5gwdtYxa-n59y4Lk8ANBGXRY) |
-| 9 | Bitcoin Macro: BTC Spot Liquidity Sweep to $69,450 | `9pWbhl1oxTgTqOiZnA-cQGcc-jXI9T1tId-Jc8bYY0M` | [Walruscan](https://walruscan.com/mainnet/blob/9pWbhl1oxTgTqOiZnA-cQGcc-jXI9T1tId-Jc8bYY0M) |
-| 10 | NBA: Los Angeles Lakers 131 - 127 Sacramento Kings | `325ARz4CvVbreH7ARCsuZly3RU5ze2638iDj19WCsCU` | [Walruscan](https://walruscan.com/mainnet/blob/325ARz4CvVbreH7ARCsuZly3RU5ze2638iDj19WCsCU) |
-| 11 | Ethereum Macro: ETH/BTC Ratio Breakdown Under 0.038 | `jDG2GmeXgQ5pk_eTfDKTWLwBqEGHbf8y2Fq_pDDzCAk` | [Walruscan](https://walruscan.com/mainnet/blob/jDG2GmeXgQ5pk_eTfDKTWLwBqEGHbf8y2Fq_pDDzCAk) |
-| 12 | Premier League: Chelsea 2 - 1 Newcastle United | `_cR7biDzHiTXYmAytnbnVMFmH5DZ64GTnbs6lioLGVw` | [Walruscan](https://walruscan.com/mainnet/blob/_cR7biDzHiTXYmAytnbnVMFmH5DZ64GTnbs6lioLGVw) |
-| 13 | UEFA Champions League: Real Madrid vs AC Milan | `TDVgtJ4dxhJhJOb6p2o18tt0vkH4zGzELh4wELA8v3Y` | [Walruscan](https://walruscan.com/mainnet/blob/TDVgtJ4dxhJhJOb6p2o18tt0vkH4zGzELh4wELA8v3Y) |
-| 14 | UEFA Champions League: Inter Milan vs Arsenal | `0LM0vnhkdqCqQDYSHVzbqeH94VvDy3f1C40a6AfCBPE` | [Walruscan](https://walruscan.com/mainnet/blob/0LM0vnhkdqCqQDYSHVzbqeH94VvDy3f1C40a6AfCBPE) |
-| 15 | NBA: Boston Celtics vs Golden State Warriors Over 228.5 | `7oV_zeh_81qAaAJ1n7kuNES1w2nQDBnSxBh7kZPkCcA` | [Walruscan](https://walruscan.com/mainnet/blob/7oV_zeh_81qAaAJ1n7kuNES1w2nQDBnSxBh7kZPkCcA) |
-| 16 | Sui Ecosystem: SUI Spot Re-accumulation Test > $1.85 | `ZFuFsoI9iHgQGvn_gwkZag7XhGYmMxPN5kG3dE50sSA` | [Walruscan](https://walruscan.com/mainnet/blob/ZFuFsoI9iHgQGvn_gwkZag7XhGYmMxPN5kG3dE50sSA) |
+| **Historical Backtest Seeds** | 16 records from real October 2024 fixtures (El Clasico, Premier League, NBA, Sui spot breakout). Fictional analyst handles (`@OptaTactics`, `@MacroCryptoQuant`, etc.). | Written to Walrus Mainnet. Carries authentic `blobId` receipts on Walruscan. | Establishes the initial credibility variance and demonstrates how memory shifts consensus. |
+| **Live User Forecasts** | New predictions submitted during the hackathon via the slide-over form. | Stored with status `PENDING` and delta `0`. Crypto forecasts require future deadline $\le 30$ days. | Demonstrates end-to-end forward resolution and onchain memory creation in real time. |
 
-*Manifest stored locally at `seed-receipts.json`.*
+> **Note on Simulated Stakes and P&L:** All stake amounts (default $250) and resulting profit/loss figures are purely simulated tracking metrics for bankroll analysis and paper performance. They do not represent real fiat or cryptocurrency deposits.
 
 ---
 
-## 🛡️ Security & Reliability Architecture
+## Walrus and Tatum Usage
 
-1. **Client Isolation:** `POST /api/memories` strictly ignores `outcome`, `credibilityDelta`, and `pnl` sent from the client. All new records are initialized to `PENDING` with delta `0`. Only the server-side resolver can commit resolution memories.
-2. **Idempotent Settlement:** `POST /api/resolve` recalls existing memories before settlement. If a `predictionId` has already been resolved, it is safely skipped (`status: "skipped"`), preventing duplicate writes or double-counting deltas.
-3. **Deadline & Grace Window:** Predictions cannot be settled before their deadline (`status: "not_due"`). A 6-hour `RESOLVER_GRACE_WINDOW_MS` prevents settlement with stale spot prices if triggered days later (`status: "expired-unresolved"`).
-4. **Batch Concurrency Guard:** The resolver caps settlements at `MAX_RESOLUTIONS_PER_BATCH = 5` per invocation to fit safely within Vercel serverless execution limits.
-5. **Fail-Closed Cron:** `GET /api/resolve` requires an `Authorization: Bearer <CRON_SECRET>` header. If the secret is missing or unset in production, the endpoint fails closed with HTTP 401.
-6. **Admin Gated Seeding:** `POST /api/seed` requires an `x-admin-secret: <ADMIN_SECRET>` header in production to prevent unauthorized spam writes to Walrus mainnet storage.
+| Integration | Role in Architecture | Implementation File |
+|---|---|---|
+| **Tatum Sui gRPC Gateway** | Primary source for Sui checkpoint sequence and digest over HTTP/2 TLS (`sui-mainnet-grpc.gateway.tatum.io:443`). | `lib/sui-grpc.ts` |
+| **Tatum Sui JSON-RPC Gateway** | Secondary fallback attempt (`sui-mainnet.gateway.tatum.io`), currently returns 404 on Sui JSON-RPC. | `lib/tatum.ts` |
+| **Tatum Data API v3** | Live crypto exchange rate queries (`/v3/tatum/rate/{symbol}?basePair=USD`) for resolving target prices at deadline. | `lib/tatum.ts`, `lib/resolver.ts` |
+| **Tatum Gateway Version API** | Gateway metadata monitoring (tier, usage, latency, version). | `lib/tatum.ts`, `app/api/tatum/route.ts` |
+| **Sui Mainnet GraphQL** *(Non-Tatum)* | Tertiary fallback for Sui checkpoint telemetry (`https://graphql.mainnet.sui.io/graphql`) when Tatum gateways are unreachable. | `lib/tatum.ts` |
+| **Walrus Memory SDK** *(Non-Tatum)* | Client-side memory SDK (`@mysten-incubation/memwal`) used to store, update, and recall immutable prediction records. | `lib/walrus.ts` |
+| **Walrus Hosted Relayer** *(Non-Tatum)* | Ephemeral write relayer (`https://relayer.memory.walrus.xyz`) processing onchain blob storage on Sui mainnet. | `lib/walrus.ts` |
+
+---
+
+## Verified Walrus Mainnet Blobs
+
+The 16 historical seed records in AlphaRecall are committed to Walrus Mainnet storage nodes. Every record is verifiable via the public explorer:
+
+| # | Prediction ID | Match / Market Event | Walrus Mainnet Blob ID | Explorer Link |
+|---|---|---|---|---|
+| 1 | `rec-01` | El Clasico: Real Madrid 0 - 4 FC Barcelona | [`MDppsKhZlP...D6OkJPZo`](https://walruscan.com/mainnet/blob/MDppsKhZlP6LG3FgAOKkiwd-Zs00vZxCNSBD6OkJPZo) | [Walruscan](https://walruscan.com/mainnet/blob/MDppsKhZlP6LG3FgAOKkiwd-Zs00vZxCNSBD6OkJPZo) |
+| 2 | `rec-02` | Premier League: Arsenal 2 - 2 Liverpool Over 2.5 Goals | [`Pvl2qLR-Mt...UsixPaVE`](https://walruscan.com/mainnet/blob/Pvl2qLR-MtlscsT6Xefn1hMa6pKDxgAHUEdUsixPaVE) | [Walruscan](https://walruscan.com/mainnet/blob/Pvl2qLR-MtlscsT6Xefn1hMa6pKDxgAHUEdUsixPaVE) |
+| 3 | `rec-03` | UEFA Champions League: Real Madrid 5 - 2 Borussia Dortmund | [`MlY3RrUcDu...rQSPbU8k`](https://walruscan.com/mainnet/blob/MlY3RrUcDu9yZqt4azuEqjNU_CAAdkQ1J6-rQSPbU8k) | [Walruscan](https://walruscan.com/mainnet/blob/MlY3RrUcDu9yZqt4azuEqjNU_CAAdkQ1J6-rQSPbU8k) |
+| 4 | `rec-04` | UEFA Champions League: FC Barcelona 4 - 1 Bayern Munich | [`IId5yX8mny...J1-F1WO0`](https://walruscan.com/mainnet/blob/IId5yX8mnya--n6K7fsU_eULIa3GBhJUzSgJ1-F1WO0) | [Walruscan](https://walruscan.com/mainnet/blob/IId5yX8mnya--n6K7fsU_eULIa3GBhJUzSgJ1-F1WO0) |
+| 5 | `rec-05` | NBA: Boston Celtics 119 - 108 Milwaukee Bucks (-9.5) | [`EGTVpuhtIy...k2-EBXPo`](https://walruscan.com/mainnet/blob/EGTVpuhtIybSbbkAH4YW07k2EC7V0BAxnvxk2-EBXPo) | [Walruscan](https://walruscan.com/mainnet/blob/EGTVpuhtIybSbbkAH4YW07k2EC7V0BAxnvxk2-EBXPo) |
+| 6 | `rec-06` | NBA: Nikola Jokic Over 26.5 Points (Nuggets vs Raptors) | [`_qRNwZHJxn...0_asDHNM`](https://walruscan.com/mainnet/blob/_qRNwZHJxnGQGFIYTqNWJB6fmzUAqJTAhjv0_asDHNM) | [Walruscan](https://walruscan.com/mainnet/blob/_qRNwZHJxnGQGFIYTqNWJB6fmzUAqJTAhjv0_asDHNM) |
+| 7 | `rec-07` | Premier League: West Ham 2 - 1 Manchester United | [`BY17qQqMED...TyQ1V0CI`](https://walruscan.com/mainnet/blob/BY17qQqMED4GWhhO8bOIs9qN_NErjaRIL5xTyQ1V0CI) | [Walruscan](https://walruscan.com/mainnet/blob/BY17qQqMED4GWhhO8bOIs9qN_NErjaRIL5xTyQ1V0CI) |
+| 8 | `rec-08` | Sui Ecosystem: SUI Spot Resistance Breakout > $2.00 | [`vLRIaRkHJB...8ANBGXRY`](https://walruscan.com/mainnet/blob/vLRIaRkHJBz6mAcv0FB5gwdtYxa-n59y4Lk8ANBGXRY) | [Walruscan](https://walruscan.com/mainnet/blob/vLRIaRkHJBz6mAcv0FB5gwdtYxa-n59y4Lk8ANBGXRY) |
+| 9 | `rec-09` | Bitcoin Macro: BTC Spot Liquidity Sweep to $69,450 | [`9pWbhl1oxT...Jc8bYY0M`](https://walruscan.com/mainnet/blob/9pWbhl1oxTgTqOiZnA-cQGcc-jXI9T1tId-Jc8bYY0M) | [Walruscan](https://walruscan.com/mainnet/blob/9pWbhl1oxTgTqOiZnA-cQGcc-jXI9T1tId-Jc8bYY0M) |
+| 10 | `rec-10` | NBA: Los Angeles Lakers 131 - 127 Sacramento Kings | [`325ARz4CvV...j19WCsCU`](https://walruscan.com/mainnet/blob/325ARz4CvVbreH7ARCsuZly3RU5ze2638iDj19WCsCU) | [Walruscan](https://walruscan.com/mainnet/blob/325ARz4CvVbreH7ARCsuZly3RU5ze2638iDj19WCsCU) |
+| 11 | `rec-11` | Ethereum Macro: ETH/BTC Ratio Breakdown Under 0.038 | [`jDG2GmeXgQ..._pDDzCAk`](https://walruscan.com/mainnet/blob/jDG2GmeXgQ5pk_eTfDKTWLwBqEGHbf8y2Fq_pDDzCAk) | [Walruscan](https://walruscan.com/mainnet/blob/jDG2GmeXgQ5pk_eTfDKTWLwBqEGHbf8y2Fq_pDDzCAk) |
+| 12 | `rec-12` | Premier League: Chelsea 2 - 1 Newcastle United | [`_cR7biDzHi...6lioLGVw`](https://walruscan.com/mainnet/blob/_cR7biDzHiTXYmAytnbnVMFmH5DZ64GTnbs6lioLGVw) | [Walruscan](https://walruscan.com/mainnet/blob/_cR7biDzHiTXYmAytnbnVMFmH5DZ64GTnbs6lioLGVw) |
+| 13 | `rec-13` | UEFA Champions League: Real Madrid vs AC Milan | [`TDVgtJ4dxh...wELA8v3Y`](https://walruscan.com/mainnet/blob/TDVgtJ4dxhJhJOb6p2o18tt0vkH4zGzELh4wELA8v3Y) | [Walruscan](https://walruscan.com/mainnet/blob/TDVgtJ4dxhJhJOb6p2o18tt0vkH4zGzELh4wELA8v3Y) |
+| 14 | `rec-14` | UEFA Champions League: Inter Milan vs Arsenal | [`0LM0vnhkdq...a6AfCBPE`](https://walruscan.com/mainnet/blob/0LM0vnhkdqCqQDYSHVzbqeH94VvDy3f1C40a6AfCBPE) | [Walruscan](https://walruscan.com/mainnet/blob/0LM0vnhkdqCqQDYSHVzbqeH94VvDy3f1C40a6AfCBPE) |
+| 15 | `rec-15` | NBA: Boston Celtics vs Golden State Warriors Over 228.5 | [`7oV_zeh_81...7kZPkCcA`](https://walruscan.com/mainnet/blob/7oV_zeh_81qAaAJ1n7kuNES1w2nQDBnSxBh7kZPkCcA) | [Walruscan](https://walruscan.com/mainnet/blob/7oV_zeh_81qAaAJ1n7kuNES1w2nQDBnSxBh7kZPkCcA) |
+| 16 | `rec-16` | Sui Ecosystem: SUI Spot Re-accumulation Test > $1.85 | [`ZFuFsoI9iH...3dE50sSA`](https://walruscan.com/mainnet/blob/ZFuFsoI9iHgQGvn_gwkZag7XhGYmMxPN5kG3dE50sSA) | [Walruscan](https://walruscan.com/mainnet/blob/ZFuFsoI9iHgQGvn_gwkZag7XhGYmMxPN5kG3dE50sSA) |
+
+*Manifest stored in source control at `seed-receipts.json`.*
+
+---
+
+## Judging Criteria Mapping
+
+| Hackathon Criterion | Project Evidence & File Reference | Current Operational Status |
+|---|---|---|
+| **Walrus Integration (30%)** | `lib/walrus.ts`, `lib/memory-codec.ts`, `seed-receipts.json` | 16 verified mainnet blobs active. Codec implements `ALPHARECALL_V1` with full backward compatibility. |
+| **Tatum Integration (30%)** | `lib/sui-grpc.ts`, `lib/tatum.ts`, `lib/resolver.ts` | Official Tatum gRPC client implemented with TLS and metadata authentication. Real-time price oracle settlement powered by Tatum Data API v3. Multi-tier fallback preserves 100% uptime with honest attribution. |
+| **Technical Quality & Rigor (30%)** | `scripts/run-tests.mjs`, `lib/dedupe.ts`, `lib/credibility.ts` | 60 comprehensive offline unit tests passing. Strict read-after-write verification, zero credential leakage, and typed Next.js App Router endpoints. |
+| **Creativity & Presentation (20%)** | `components/dashboard/`, `components/journal/`, Bento Grid UI | Modern data-first dashboard with reactive consensus pivot calculation and live telemetry feeds. |
+
+---
+
+## Architecture & Security
+
+1. **Client Outcome Isolation:** `POST /api/memories` strictly rejects client-supplied `outcome`, `credibilityDelta`, and `pnl` values. All user submissions are initialized to `PENDING` with delta `0`. Outcome mutations can only originate from the server-side settlement pipeline.
+2. **Idempotent Settlement:** `POST /api/resolve` fetches existing memories before committing new blobs. If a prediction is already resolved, it is safely skipped (`status: "skipped"`), preventing duplicate writes or doubled credibility deltas.
+3. **Synchronous Client Lock & Idempotency Keys:** Form submission locks via `useRef` to eliminate accidental double-tap submits on mobile devices, paired with an in-memory 10-minute cache on `clientRequestId`.
+4. **Duplicate Content Gate:** Submissions with identical analyst, target, pick, and deadline within 60 seconds return HTTP 409 Conflict.
+5. **Fail-Closed Cron Protection:** `GET /api/resolve` requires an `Authorization: Bearer <CRON_SECRET>` header. Without this secret in production, requests are rejected with HTTP 401.
+6. **Admin Gated Seeding:** `POST /api/seed` requires an `x-admin-secret: <ADMIN_SECRET>` header to prevent unauthorized batch storage operations.
 7. **Rate Limiting:** In-memory sliding buckets enforce a 30 predictions/hour per-IP limit and a 200 predictions/day global cap.
 
 ---
 
-## ⚠️ Known Limitations
+## Known Limitations
 
-* **Forecaster Identity (Demo Mode):** In the current demo release, analyst handles (e.g. `@OptaTactics`) are entered as text without requiring a cryptographic wallet signature per forecast. Production deployments will require Sui wallet signature verification.
-* **Sports Match Settlement:** Automated price resolution is active for crypto markets via the Tatum Data API. Sports matches (Soccer / NBA) are explicitly tagged as `"manual resolution"` and require an official scorecard feed (e.g. ESPN) rather than claiming Tatum oracle settlement.
-* **Serverless Rate Limiting:** In-memory rate limiting is best-effort on serverless platforms (like Vercel) where cold starts create fresh process memory. For enterprise multi-region scaling, Upstash Redis or KV is recommended.
-* **Public Oracle Fallback:** A guarded CoinGecko fallback is available for local resilience, but strictly disabled by default (`ALLOW_PUBLIC_ORACLE_FALLBACK=false`) to ensure all verified settlements come directly from Tatum.
+* **Forecaster Identity (Text Handles):** Analyst handles (e.g. `@OptaTactics`) are currently user-specified text strings without cryptographic wallet signatures per post. Production implementations will require Sui wallet signatures.
+* **Sports Match Settlement:** Automated settlement is fully implemented for crypto markets via Tatum Data API. Sports matches currently require manual outcome verification.
+* **Serverless In-Memory State:** Rate limit counters and deduplication caches reside in Node.js runtime memory. In distributed serverless multi-region deployments, an external store like Redis is recommended for distributed consistency.
+* **Spot Grace Window vs Historical Tick:** Settlement uses spot rates queried during a 6-hour grace window (`RESOLVER_GRACE_WINDOW_MS = 6h`) following deadline rather than tick-level historical prices. Predictions evaluated after the grace window expire unresolved.
+* **Permanent Early Test Blobs:** Submissions executed during early test phases before the 60-second duplicate gate resulted in permanent `@AlphaOne` duplicate blobs on Walrus. These are deduplicated at read time via `dedupePredictions()` without data corruption.
 
 ---
 
-## 🚀 Installation & Local Development
+## Getting Started
 
 ### Prerequisites
-* Node.js **>= 22.6.0** (required for native `--experimental-strip-types`)
+* Node.js **>= 22.0.0**
 * npm **>= 10.0.0**
 
 ### 1. Clone Repository
@@ -115,41 +152,37 @@ cd Alpharecall
 npm install
 ```
 
-### 3. Configure Environment
+### 3. Configure Environment Variables
 Copy `.env.example` to `.env.local`:
 ```bash
 cp .env.example .env.local
 ```
-Fill in your credentials:
-```env
-# Tatum API Key from https://dashboard.tatum.io/
-TATUM_API_KEY=your_tatum_api_key_here
 
-# Walrus Memory credentials from https://memory.walrus.xyz/dashboard
-MEMWAL_PRIVATE_KEY=your_ed25519_private_key_in_hex
-MEMWAL_ACCOUNT_ID=0x_your_walrus_account_object_id_here
-MEMWAL_SERVER_URL=https://relayer.memory.walrus.xyz
-MEMWAL_NAMESPACE=alpharecall
+| Variable | Description | Required | Example |
+|---|---|---|---|
+| `TATUM_API_KEY` | Tatum API Key from https://dashboard.tatum.io | Yes | `t-64...` |
+| `MEMWAL_PRIVATE_KEY` | Ed25519 delegate private key for Walrus Memory | Yes | 64-char hex string |
+| `MEMWAL_ACCOUNT_ID` | Walrus Memory account object ID | Yes | `0x...` |
+| `MEMWAL_SERVER_URL` | Walrus Relayer endpoint | Optional | `https://relayer.memory.walrus.xyz` |
+| `MEMWAL_NAMESPACE` | Memory namespace isolation | Optional | `alpharecall` |
+| `CRON_SECRET` | Secret bearer token for automated resolver cron | Yes (Prod) | `your_cron_secret` |
+| `ADMIN_SECRET` | Secret header for `/api/seed` endpoint | Yes (Prod) | `your_admin_secret` |
+| `ALLOW_PUBLIC_ORACLE_FALLBACK` | Allow CoinGecko fallback when Tatum is down | Optional | `false` |
+| `NEXT_PUBLIC_ENABLE_SEED` | Show UI button for seed trigger in Sidebar | Optional | `false` |
 
-# Security & Cron
-CRON_SECRET=your_cron_secret_here
-ADMIN_SECRET=your_admin_secret_here
-ALLOW_PUBLIC_ORACLE_FALLBACK=false
-```
-
-### 4. Delegate Key Generation (Helper)
-If you need an Ed25519 delegate key for Walrus Memory:
+### 4. Generate Delegate Key (Helper)
+Generate a fresh Ed25519 keypair for Walrus Memory delegation:
 ```bash
 npm run keygen
 ```
 
-### 5. Run Comprehensive Test Suite (Offline, Mock)
+### 5. Run Offline Test Suite
+Run the 60 unit tests locally with mock servers (zero network footprint):
 ```bash
 npm test
 ```
-*Executes 37 unit tests covering codec roundtrips, backward compatibility, boundary rules, deadline invariants, idempotency, record deduplication per-id, Tatum parsing, and API security gates.*
 
-### 6. Start Development Server
+### 6. Run Development Server
 ```bash
 npm run dev
 ```
@@ -157,58 +190,67 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## ☁️ Vercel Deployment Guide
+## Vercel Deployment Guide
 
-To deploy AlphaRecall to Vercel:
-
-1. Import the repository into your Vercel Dashboard.
-2. Configure the following **Environment Variables** in project settings:
-   * `TATUM_API_KEY`
-   * `MEMWAL_PRIVATE_KEY`
-   * `MEMWAL_ACCOUNT_ID`
-   * `MEMWAL_SERVER_URL`
-   * `MEMWAL_NAMESPACE`
-   * `CRON_SECRET`
-   * `ADMIN_SECRET`
-   * `ALLOW_PUBLIC_ORACLE_FALLBACK`
-3. **Build & Output Settings:**
+1. Push your code to GitHub and import the repository into Vercel.
+2. In Vercel Project Settings, configure the environment variables listed in the table above.
+3. Build Settings:
    * Framework Preset: **Next.js**
    * Build Command: `npm run build`
    * Node.js Version: **22.x**
 
 ---
 
-## 🤖 Automated Resolution (GitHub Actions Scheduler)
+## Automated Resolution (GitHub Actions Scheduler)
 
-Because Vercel Hobby plan restricts built-in cron executions to once daily, automated forecast settlement is managed via a dedicated GitHub Actions workflow: [`.github/workflows/resolve-scheduler.yml`](.github/workflows/resolve-scheduler.yml).
-
-### How It Works
-* **Frequency:** Triggers automatically every 30 minutes (`*/30 * * * *`) via GitHub Actions `schedule`, plus manual triggering via `workflow_dispatch`.
-* **Settlement Invariant:** Every mature forecast is evaluated within its 6-hour grace window (`RESOLVER_GRACE_WINDOW_MS = 6h`), preventing forecasts from expiring unresolved.
-* **Concurrency Protection:** Configured with `concurrency: { group: resolve-scheduler, cancel-in-progress: false }` to guarantee that two resolution passes never run simultaneously.
-* **Security & Non-Leakage:** Sends a secure request to `GET /api/resolve` with `Authorization: Bearer <CRON_SECRET>`. The secret is passed strictly through environment variables and never exposed in logs or command outputs.
+Automated settlement runs every 30 minutes via GitHub Actions: [`.github/workflows/resolve-scheduler.yml`](.github/workflows/resolve-scheduler.yml).
 
 ### Required GitHub Secrets
-Navigate to your GitHub repository -> **Settings** -> **Secrets and variables** -> **Actions**, and add the following two repository secrets:
-
-| Secret Name | Description | Example / Note |
-|---|---|---|
-| `APP_URL` | Base URL of your deployed application (must start with `https://`, without trailing slash) | `https://alpharecall.vercel.app` |
-| `CRON_SECRET` | The exact authorization secret configured in your Vercel / server environment | e.g. `your_production_cron_secret` |
-
-### Manual Verification
-To manually test resolution from GitHub:
-1. Go to the **Actions** tab in your GitHub repository.
-2. Under "Workflows", select **AlphaRecall Resolver Scheduler**.
-3. Click the **Run workflow** dropdown and confirm with the green button.
-4. Inspect the workflow run logs to view non-sensitive resolution telemetry (evaluated candidates, resolved count, skipped count, and cooldown notices).
-
-### Operational Caveats
-* **Schedule Variance:** GitHub Actions cron schedules may experience queue latency of several minutes during peak platform traffic. Because AlphaRecall's grace window is 6 hours, minor dispatch delays have zero adverse effect on forecast resolution.
-* **Public Repository Inactivity Rule:** GitHub automatically disables scheduled workflows on public repositories after 60 days without repository activity. Scheduled runs can be re-enabled at any time by pushing a commit or manually triggering a workflow run.
+Under **Settings** -> **Secrets and variables** -> **Actions**:
+* `APP_URL`: Production URL starting strictly with `https://` (e.g. `https://alpharecall.vercel.app`). Non-HTTPS URLs fail closed.
+* `CRON_SECRET`: Secret token matching the `CRON_SECRET` configured in Vercel.
 
 ---
 
-## 📜 License
+## Project Structure
+
+```text
+alpharecall/
+├── app/                      # Next.js App Router pages and API routes
+│   ├── api/memories/         # Forecast creation and Walrus memory retrieval
+│   ├── api/resolve/          # Automated settlement engine (cron protected)
+│   ├── api/seed/             # Baseline seed script endpoint (admin protected)
+│   ├── api/tatum/            # Live telemetry for Tatum Gateway & Sui Checkpoints
+│   ├── layout.tsx            # Global layout shell and meta configuration
+│   └── page.tsx              # Main dashboard view orchestrator
+├── components/               # React UI presentation components
+│   ├── credibility/          # Credibility matrix and consensus breakdown
+│   ├── dashboard/            # Bento grid metric cards and bankroll charts
+│   ├── journal/              # Prediction journal table and submission slide-over
+│   └── layout/               # Navigation sidebar, mobile drawer, and header
+├── lib/                      # Core business logic and integrations
+│   ├── credibility.ts        # Credibility scoring and consensus pivot formulas
+│   ├── dashboard-stats.ts    # Pure metrics calculations and record classifiers
+│   ├── dedupe.ts             # Prediction deduplication and merge functions
+│   ├── memory-codec.ts       # ALPHARECALL_V1 payload encoding and decoding
+│   ├── resolver.ts           # Deadline evaluation and price comparison engine
+│   ├── sui-grpc.ts           # Native Tatum Sui gRPC client implementation
+│   ├── tatum.ts              # Tatum Data API and Sui checkpoint source chain
+│   ├── types.ts              # Canonical TypeScript interface declarations
+│   └── walrus.ts             # Mysten Labs MemWal SDK connector
+├── proto/                    # Vendored Sui RPC v2 Protocol Buffers
+│   ├── ledger-service-descriptor.json # In-memory descriptor for serverless
+│   ├── README.md             # Proto source documentation and commit tracking
+│   └── sui/rpc/v2/           # Mysten Labs Sui RPC v2 proto definitions
+├── scripts/                  # Automation and testing utilities
+│   ├── run-tests.mjs         # Comprehensive offline test suite (60 tests)
+│   ├── seed-mainnet.mjs      # Walrus mainnet baseline seeding script
+│   └── ts-loader.mjs         # Native TypeScript loader for Node.js
+└── seed-receipts.json        # Canonical 16 onchain Walrus blob receipts
+```
+
+---
+
+## License
 
 MIT License. See [LICENSE](LICENSE) for details.

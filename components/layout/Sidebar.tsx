@@ -323,14 +323,16 @@ export function Sidebar({
               </span>
             </div>
 
-            <button
-              onClick={onSeed}
-              disabled={seeding}
-              className="w-full flex items-center justify-center gap-1.5 py-1 px-2 rounded-[6px] bg-[var(--border)] hover:bg-[var(--accent)]/15 hover:text-[var(--accent)] text-[var(--text)] text-[10px] font-medium transition border border-transparent hover:border-[var(--accent)]/30 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3 h-3 ${seeding ? "animate-spin" : ""}`} />
-              <span>{seeding ? "Seeding..." : "Seed 16 Memories"}</span>
-            </button>
+            {process.env.NEXT_PUBLIC_ENABLE_SEED === "true" && (
+              <button
+                onClick={onSeed}
+                disabled={seeding}
+                className="w-full flex items-center justify-center gap-1.5 py-1 px-2 rounded-[6px] bg-[var(--border)] hover:bg-[var(--accent)]/15 hover:text-[var(--accent)] text-[var(--text)] text-[10px] font-medium transition border border-transparent hover:border-[var(--accent)]/30 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${seeding ? "animate-spin" : ""}`} />
+                <span>{seeding ? "Seeding..." : "Seed 16 Memories"}</span>
+              </button>
+            )}
           </div>
 
           {/* Theme Switcher Toggle */}
