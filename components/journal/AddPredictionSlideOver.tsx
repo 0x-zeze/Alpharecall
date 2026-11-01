@@ -40,11 +40,13 @@ export function AddPredictionSlideOver({
   const [sportType, setSportType] = useState<PredictionCategory>("soccer");
   const [odds, setOdds] = useState("-110");
   const [stake, setStake] = useState(250);
-  const [analyst, setAnalyst] = useState("@OptaTactics");
+  const [analyst, setAnalyst] = useState("");
   const [confidence, setConfidence] = useState(4);
   const [reasoning, setReasoning] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const isAnalystValid = useMemo(() => /^@[A-Za-z0-9_]{2,30}$/.test(analyst.trim()), [analyst]);
 
   // Synchronous lock to prevent double-tap submissions on mobile/iOS
   const isSubmittingRef = useRef(false);
@@ -171,6 +173,12 @@ export function AddPredictionSlideOver({
     if (isSubmittingRef.current) return;
 
     setFormError(null);
+
+    const analystTrimmed = analyst.trim();
+    if (!/^@[A-Za-z0-9_]{2,30}$/.test(analystTrimmed)) {
+      setFormError("Forecaster handle must start with '@' followed by 2-30 alphanumeric characters or underscores (e.g. @YourHandle).");
+      return;
+    }
 
     let finalTarget = target.trim();
     let finalPick = pick.trim();
@@ -308,6 +316,7 @@ export function AddPredictionSlideOver({
       // Reset form
       setTarget("");
       setPick("");
+      setAnalyst("");
       setSelectedFixture(null);
       setTargetPriceInput("2.0");
       setReasoning("");
@@ -843,17 +852,22 @@ export function AddPredictionSlideOver({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[var(--muted)] mb-1.5 uppercase text-[10px]">
-                    Forecaster Handle (@handle)
+                    Forecaster Handle (@handle) *
                   </label>
                   <input
                     type="text"
                     required
-                    pattern="^@[A-Za-z0-9_]{3,30}$"
-                    placeholder="@AnalystHandle"
+                    pattern="^@[A-Za-z0-9_]{2,30}$"
+                    placeholder="@YourHandle"
                     value={analyst}
                     onChange={(e) => setAnalyst(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-[8px] bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] focus:border-[var(--accent)] focus:outline-none min-h-[44px]"
                   />
+                  {!isAnalystValid && analyst.length > 0 && (
+                    <span className="text-[10px] text-[var(--loss)] mt-1 block">
+                      Handle must start with @ followed by 2-30 alphanumeric characters or underscores (e.g. @YourHandle).
+                    </span>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[var(--muted)] mb-1.5 uppercase text-[10px]">
@@ -890,7 +904,7 @@ export function AddPredictionSlideOver({
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting || (sportType !== "crypto" && !isManualEntry && !selectedFixture)}
+                disabled={isSubmitting || !isAnalystValid || (sportType !== "crypto" && !isManualEntry && !selectedFixture)}
                 className="w-full py-3 px-4 rounded-[8px] bg-[var(--accent)] hover:opacity-90 disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2 transition cursor-pointer min-h-[44px]"
               >
                 {isSubmitting ? (

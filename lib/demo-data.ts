@@ -387,3 +387,20 @@ export const DEMO_PREDICTIONS: PredictionRecord[] = [
     tags: ["Sui", "DeFi", "Support"],
   },
 ];
+
+/**
+ * Dynamic set of seed analyst handles collected from canonical demo predictions.
+ */
+export const SEED_ANALYST_HANDLES: string[] = Array.from(
+  new Set(DEMO_PREDICTIONS.map((p) => p.analyst.trim()))
+);
+
+/**
+ * Checks case-insensitively whether a handle belongs to backtest seed analyst data.
+ */
+export function isSeedAnalystHandle(handle: string): boolean {
+  if (!handle || typeof handle !== "string") return false;
+  const normalized = handle.trim().toLowerCase();
+  return SEED_ANALYST_HANDLES.some((h) => h.toLowerCase() === normalized);
+}
+

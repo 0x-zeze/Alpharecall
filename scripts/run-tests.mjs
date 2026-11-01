@@ -1137,6 +1137,105 @@ async function main() {
       assert.equal(json.error?.includes("Analyst handle must start with '@'"), true);
     });
 
+    await it("should reject seed analyst handles with 400 and reserved message (case-insensitive)", async () => {
+      const seedHandles = ["@OptaTactics", "@optatactics", "@STATMANDAVEFC", "@MacroCryptoQuant"];
+      for (const h of seedHandles) {
+        const req = new Request("http://localhost:3000/api/memories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "Seed Analyst Attempt",
+            target: "Manual Match",
+            pick: "Home Win",
+            analyst: h,
+            sportType: "soccer",
+          }),
+        });
+        const res = await postMemory(req);
+        const json = await res.json();
+        assert.equal(res.status, 400, `Expected 400 for ${h}`);
+        assert.equal(json.success, false);
+        assert.equal(json.error, "This handle is reserved for backtest seed data. Please choose another handle.");
+      }
+    });
+
+    await it("should accept non-seed valid analyst handle (e.g. @MyNewAnalyst_99)", async () => {
+      const req = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "New Analyst Forecast",
+          target: "Arsenal vs Chelsea",
+          pick: "Arsenal to Win",
+          analyst: "@MyNewAnalyst_99",
+          sportType: "soccer",
+        }),
+      });
+      const res = await postMemory(req);
+      const json = await res.json();
+      assert.equal(res.status, 200);
+      assert.equal(json.success, true);
+      assert.equal(json.data.analyst, "@MyNewAnalyst_99");
+    });
+
+    await it("seed handle rejection applies to both manual entry and sports fixture entry", async () => {
+      // Manual entry with seed handle -> rejected
+      const reqManual = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Manual NBA Prediction",
+          target: "Manual Target",
+          pick: "Manual Pick",
+          analyst: "@HoopSharpsNBA",
+          sportType: "nba",
+        }),
+      });
+      const resManual = await postMemory(reqManual);
+      const jsonManual = await resManual.json();
+      assert.equal(resManual.status, 400);
+      assert.equal(jsonManual.error, "This handle is reserved for backtest seed data. Please choose another handle.");
+
+      // Sports fixture entry with seed handle -> also rejected
+      const futureKickoff = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+      const reqFixture = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          analyst: "@hoopsharpsnba",
+          sportType: "nba",
+          fixture: {
+            provider: "espn",
+            eventId: "mock_event_nba",
+            sport: "nba",
+            league: "nba",
+            kickoff: futureKickoff,
+            home: { id: "1", name: "Boston Celtics" },
+            away: { id: "2", name: "Miami Heat" },
+          },
+          market: { type: "moneyline", selection: "home" },
+        }),
+      });
+      const resFixture = await postMemory(reqFixture);
+      const jsonFixture = await resFixture.json();
+      assert.equal(resFixture.status, 400);
+      assert.equal(jsonFixture.error, "This handle is reserved for backtest seed data. Please choose another handle.");
+    });
+
+    await it("existing seed records in demo data still decode and retain their original handles", async () => {
+      const { DEMO_PREDICTIONS } = await import("../lib/demo-data.ts");
+      const { decodeMemory, encodeMemory, predictionRecordToPayload } = await import("../lib/memory-codec.ts");
+      assert.ok(DEMO_PREDICTIONS.length >= 16);
+      const optaRecord = DEMO_PREDICTIONS.find((p) => p.analyst === "@OptaTactics");
+      assert.ok(optaRecord);
+      assert.equal(optaRecord.analyst, "@OptaTactics");
+      const payload = predictionRecordToPayload(optaRecord);
+      const encoded = encodeMemory(payload);
+      const decoded = decodeMemory(encoded);
+      assert.ok(decoded);
+      assert.equal(decoded.analyst, "@OptaTactics");
+    });
+
     await it("clientRequestId deduplication: two POSTs with same clientRequestId -> only one saveMemory write", async () => {
       let saveCount = 0;
       setCustomSaveMemory(async (record) => {
@@ -2029,7 +2128,7 @@ async function main() {
       };
 
       const validSportsBody = {
-        analyst: "@StatmanDaveFC",
+        analyst: "@FootyAnalyst",
         sportType: "soccer",
         stake: 300,
         confidence: 4,
@@ -2099,7 +2198,7 @@ async function main() {
       };
 
       const badLineBody = {
-        analyst: "@StatmanDaveFC",
+        analyst: "@FootyAnalyst",
         sportType: "soccer",
         stake: 300,
         confidence: 4,

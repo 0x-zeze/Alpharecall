@@ -5,6 +5,7 @@ import { MAX_PREDICTION_HORIZON_MS } from "@/lib/resolver";
 import type { PredictionCategory, SportsFixtureRef, SportsMarketRef } from "@/lib/types";
 import { getVerifiedFixtureById } from "@/lib/fixtures";
 import { SUPPORTED_LEAGUES } from "@/lib/espn";
+import { isSeedAnalystHandle } from "@/lib/demo-data";
 
 // In-memory rate limiting (best-effort across serverless instances)
 interface RateLimitBucket {
@@ -191,14 +192,24 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. Validate Analyst Pattern: @[A-Za-z0-9_]{3,30}
+    // 4. Validate Analyst Pattern: @[A-Za-z0-9_]{2,30}
     const analystStr = typeof analyst === "string" ? analyst.trim() : "";
-    const analystRegex = /^@[A-Za-z0-9_]{3,30}$/;
+    const analystRegex = /^@[A-Za-z0-9_]{2,30}$/;
     if (!analystRegex.test(analystStr)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Analyst handle must start with '@' followed by 3-30 alphanumeric characters or underscores (e.g. @OptaTactics).",
+          error: "Analyst handle must start with '@' followed by 2-30 alphanumeric characters or underscores (e.g. @YourHandle).",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (isSeedAnalystHandle(analystStr)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "This handle is reserved for backtest seed data. Please choose another handle.",
         },
         { status: 400 }
       );
