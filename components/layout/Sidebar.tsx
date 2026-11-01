@@ -173,7 +173,11 @@ export function Sidebar({
                 <span className={resolvedSui?.status === "live" && resolvedSui.checkpoint ? "text-[var(--accent)] font-semibold truncate max-w-[180px]" : "text-[var(--muted)]"}>
                   {resolvedSui?.status === "live" && resolvedSui.checkpoint
                     ? `#${resolvedSui.checkpoint.slice(-8)} via ${
-                        resolvedSui.source === "tatum-gateway" ? "gateway Tatum" : "Sui GraphQL"
+                        resolvedSui.source === "tatum-grpc"
+                          ? "Tatum gRPC"
+                          : resolvedSui.source === "tatum-gateway"
+                          ? "gateway Tatum"
+                          : "Sui GraphQL"
                       }`
                     : "unavailable"}
                 </span>
@@ -286,7 +290,11 @@ export function Sidebar({
               <span className={`text-[10px] truncate max-w-[140px] ${resolvedSui?.status === "live" && resolvedSui.checkpoint ? "font-semibold text-[var(--accent)]" : ""}`}>
                 {resolvedSui?.status === "live" && resolvedSui.checkpoint
                   ? `#${resolvedSui.checkpoint.slice(-8)} via ${
-                      resolvedSui.source === "tatum-gateway" ? "gateway Tatum" : "Sui GraphQL"
+                      resolvedSui.source === "tatum-grpc"
+                        ? "Tatum gRPC"
+                        : resolvedSui.source === "tatum-gateway"
+                        ? "gateway Tatum"
+                        : "Sui GraphQL"
                     }`
                   : "unavailable"}
               </span>

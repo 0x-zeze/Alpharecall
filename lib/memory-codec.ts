@@ -46,7 +46,7 @@ export interface MemoryPayloadV1 {
   // BAGIAN 3: Optional Sui Anchor fields
   suiCheckpoint?: string | null;
   suiCheckpointDigest?: string | null;
-  suiCheckpointSource?: "tatum-gateway" | "sui-graphql" | null;
+  suiCheckpointSource?: "tatum-grpc" | "tatum-gateway" | "sui-graphql" | null;
 }
 
 /**
@@ -168,8 +168,10 @@ export function decodeMemory(rawText: string | null | undefined): MemoryPayloadV
   const suiCheckpoint = typeof obj.suiCheckpoint === "string" ? obj.suiCheckpoint : null;
   const suiCheckpointDigest = typeof obj.suiCheckpointDigest === "string" ? obj.suiCheckpointDigest : null;
   const suiCheckpointSource =
-    obj.suiCheckpointSource === "tatum-gateway" || obj.suiCheckpointSource === "sui-graphql"
-      ? (obj.suiCheckpointSource as "tatum-gateway" | "sui-graphql")
+    obj.suiCheckpointSource === "tatum-grpc" ||
+    obj.suiCheckpointSource === "tatum-gateway" ||
+    obj.suiCheckpointSource === "sui-graphql"
+      ? (obj.suiCheckpointSource as "tatum-grpc" | "tatum-gateway" | "sui-graphql")
       : null;
 
   return {

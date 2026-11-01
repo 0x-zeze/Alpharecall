@@ -37,7 +37,7 @@ export interface PredictionRecord {
   // BAGIAN 3: Optional Sui Anchor fields
   suiCheckpoint?: string | null;
   suiCheckpointDigest?: string | null;
-  suiCheckpointSource?: "tatum-gateway" | "sui-graphql" | null;
+  suiCheckpointSource?: "tatum-grpc" | "tatum-gateway" | "sui-graphql" | null;
   oracleFallbackUsed?: boolean;
 }
 
@@ -82,7 +82,7 @@ export interface TatumGatewayStatus {
   error?: string | null;
 }
 
-export type SuiCheckpointSource = "tatum-gateway" | "sui-graphql";
+export type SuiCheckpointSource = "tatum-grpc" | "tatum-gateway" | "sui-graphql";
 
 export interface SuiChainStatus {
   ok: boolean;

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getTatumGatewayStatus, getSuiChainMetrics } from "@/lib/tatum";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const [tatumStatus, suiStatus] = await Promise.all([
@@ -13,7 +16,7 @@ export async function GET() {
       data: {
         tatum: tatumStatus,
         sui: suiStatus,
-        // Backward-compatible fields
+        // Backward-compatible fields — strictly consistent with suiStatus
         ok: tatumStatus.ok,
         status: tatumStatus.status,
         plan: tatumStatus.plan,
@@ -23,7 +26,7 @@ export async function GET() {
         epoch: suiStatus.epoch,
         referenceGasPrice: suiStatus.referenceGasPrice,
         chainId: suiStatus.chainId,
-        isTatumGateway: tatumStatus.ok,
+        isTatumGateway: suiStatus.isTatumGateway,
         source: suiStatus.source,
         gatewayWarning: suiStatus.gatewayWarning || null,
       },

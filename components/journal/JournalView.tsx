@@ -218,7 +218,9 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                     <p className="text-[var(--muted)]">
                       {pred.suiCheckpoint
                         ? `Sui #${pred.suiCheckpoint.slice(-8)}${
-                            pred.suiCheckpointSource === "tatum-gateway"
+                            pred.suiCheckpointSource === "tatum-grpc"
+                              ? " via Tatum gRPC"
+                              : pred.suiCheckpointSource === "tatum-gateway"
                               ? " via Tatum gateway"
                               : pred.suiCheckpointSource === "sui-graphql"
                               ? " via Sui GraphQL"
@@ -469,7 +471,9 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                                     {pred.suiCheckpoint ? (
                                       <span className="font-mono-num text-[10px] text-[var(--accent)] font-semibold">
                                         #{pred.suiCheckpoint.slice(-8)}
-                                        {pred.suiCheckpointSource === "tatum-gateway" ? (
+                                        {pred.suiCheckpointSource === "tatum-grpc" ? (
+                                          <span className="text-[var(--muted)] font-normal ml-1">via Tatum gRPC</span>
+                                        ) : pred.suiCheckpointSource === "tatum-gateway" ? (
                                           <span className="text-[var(--muted)] font-normal ml-1">via Tatum gateway</span>
                                         ) : pred.suiCheckpointSource === "sui-graphql" ? (
                                           <span className="text-[var(--muted)] font-normal ml-1">via Sui GraphQL</span>
