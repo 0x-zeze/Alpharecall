@@ -208,7 +208,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                             abbr={pred.fixture.home.abbr}
                             size={16}
                           />
-                          <span className="text-[10px] text-[var(--muted)]">@</span>
+                          <span className="text-[10px] text-[var(--muted)]">vs</span>
                           <TeamLogo
                             logo={pred.fixture.away.logo}
                             name={pred.fixture.away.name}
@@ -345,7 +345,7 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                                   abbr={pred.fixture.home.abbr}
                                   size={16}
                                 />
-                                <span className="text-[10px] text-[var(--muted)]">@</span>
+                                <span className="text-[10px] text-[var(--muted)]">vs</span>
                                 <TeamLogo
                                   logo={pred.fixture.away.logo}
                                   name={pred.fixture.away.name}

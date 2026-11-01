@@ -554,7 +554,11 @@ export function AddPredictionSlideOver({
                   </div>
 
                   {/* Fixtures list scroll box */}
-                  <div className="max-h-56 overflow-y-auto space-y-2.5 pr-1 border border-[var(--border)]/50 p-2 rounded-[8px] bg-[var(--card)]">
+                  <div
+                    role="listbox"
+                    aria-label="Available upcoming matches"
+                    className="max-h-60 overflow-y-auto space-y-2.5 pr-1 border border-[var(--border)]/50 p-2 rounded-[8px] bg-[var(--card)]"
+                  >
                     {fixturesLoading ? (
                       <div className="py-8 text-center text-[var(--muted)] space-y-2">
                         <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto" />
@@ -599,21 +603,50 @@ export function AddPredictionSlideOver({
                               <button
                                 key={f.eventId}
                                 type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                aria-label={`${f.home.name} (Home) vs ${f.away.name} (Away), ${f.leagueLabel}, ${localTime}`}
                                 onClick={() => setSelectedFixture(f)}
-                                className={`w-full text-left p-2 rounded-[6px] border transition min-h-[44px] flex items-center justify-between gap-2 ${
+                                className={`w-full text-left p-2.5 rounded-xl border transition-all duration-200 min-h-[56px] flex items-center justify-between gap-2.5 ${
                                   isSelected
-                                    ? "bg-[var(--accent)]/15 border-[var(--accent)] text-[var(--text)]"
-                                    : "bg-[var(--bg)] border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)]/30 hover:text-[var(--text)]"
+                                    ? "bg-[var(--accent-violet)]/15 border-[var(--accent-violet)] text-[var(--text)] shadow-[0_0_12px_-2px_var(--accent-violet)]"
+                                    : "bg-[var(--bg)] border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
                                 }`}
                               >
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <TeamLogo logo={f.home.logo} name={f.home.name} abbr={f.home.abbr} size={18} />
-                                  <span className="font-semibold text-xs truncate text-[var(--text)]">{f.home.name}</span>
-                                  <span className="text-[10px] text-[var(--muted)] shrink-0">vs</span>
-                                  <TeamLogo logo={f.away.logo} name={f.away.name} abbr={f.away.abbr} size={18} />
-                                  <span className="font-semibold text-xs truncate text-[var(--text)]">{f.away.name}</span>
+                                {/* Two-line team stack: Home on top, Away on bottom */}
+                                <div className="flex-1 min-w-0 space-y-1.5">
+                                  {/* Home Team (Top line) */}
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <TeamLogo logo={f.home.logo} name={f.home.name} abbr={f.home.abbr} size={18} />
+                                    <span className="font-semibold text-xs text-[var(--text)] line-clamp-2 leading-tight flex-1">
+                                      {f.home.name}
+                                    </span>
+                                    <span className="text-[8px] uppercase tracking-wider px-1 py-0.2 rounded bg-[var(--border)] text-[var(--muted)] font-mono-num shrink-0">
+                                      Home
+                                    </span>
+                                  </div>
+
+                                  {/* Away Team (Bottom line) */}
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <TeamLogo logo={f.away.logo} name={f.away.name} abbr={f.away.abbr} size={18} />
+                                    <span className="font-semibold text-xs text-[var(--text)] line-clamp-2 leading-tight flex-1">
+                                      {f.away.name}
+                                    </span>
+                                    <span className="text-[8px] uppercase tracking-wider px-1 py-0.2 rounded bg-[var(--border)] text-[var(--muted)] font-mono-num shrink-0">
+                                      Away
+                                    </span>
+                                  </div>
                                 </div>
-                                <span className="text-[10px] font-mono-num text-[var(--muted)] shrink-0">{localTime}</span>
+
+                                {/* Right: Kickoff time & League label */}
+                                <div className="shrink-0 flex flex-col items-end justify-center text-right pl-2 border-l border-[var(--border)]/60 min-w-[64px]">
+                                  <span className="text-[10px] font-mono-num text-[var(--accent)] font-semibold whitespace-nowrap">
+                                    {localTime}
+                                  </span>
+                                  <span className="text-[9px] font-mono-num text-[var(--muted)] truncate max-w-[70px] uppercase">
+                                    {f.leagueLabel}
+                                  </span>
+                                </div>
                               </button>
                             );
                           })}
