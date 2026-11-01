@@ -2162,10 +2162,58 @@ async function main() {
       assert.equal(res.status, 200);
       assert.equal(json.success, true);
       assert.equal(json.data.target, "Arsenal vs Liverpool"); // Server overwritten!
-      assert.equal(json.data.pick, "Arsenal to Win"); // Server overwritten!
+      assert.equal(json.data.pick, "Arsenal to win"); // Server overwritten!
       assert.equal(json.data.fixture?.eventId, "mock_event_999");
 
       globalThis.fetch = originalFetch;
+    });
+
+    await it("formatSportsPickSummary generates clean English summary for moneyline and total", async () => {
+      const { formatSportsPickSummary } = await import("../lib/fixtures.ts");
+      // NBA moneyline
+      const nbaMl = formatSportsPickSummary(
+        "Cleveland Cavaliers",
+        "Boston Celtics",
+        { type: "moneyline", selection: "home" },
+        "nba"
+      );
+      assert.equal(nbaMl, "Cleveland Cavaliers to win");
+
+      // NBA away win
+      const nbaAway = formatSportsPickSummary(
+        "Cleveland Cavaliers",
+        "Boston Celtics",
+        { type: "moneyline", selection: "away" },
+        "nba"
+      );
+      assert.equal(nbaAway, "Boston Celtics to win");
+
+      // NBA total
+      const nbaTotal = formatSportsPickSummary(
+        "Cleveland Cavaliers",
+        "Boston Celtics",
+        { type: "total", selection: "over", line: 215.5 },
+        "nba"
+      );
+      assert.equal(nbaTotal, "Over 215.5 total points");
+
+      // Soccer draw
+      const soccerDraw = formatSportsPickSummary(
+        "Arsenal",
+        "Liverpool",
+        { type: "moneyline", selection: "draw" },
+        "soccer"
+      );
+      assert.equal(soccerDraw, "Draw");
+
+      // Soccer total
+      const soccerTotal = formatSportsPickSummary(
+        "Arsenal",
+        "Liverpool",
+        { type: "total", selection: "under", line: 2.5 },
+        "soccer"
+      );
+      assert.equal(soccerTotal, "Under 2.5 total goals");
     });
 
     await it("POST /api/memories rejects total line that is not a half-number (x.5)", async () => {

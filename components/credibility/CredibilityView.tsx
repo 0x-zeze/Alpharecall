@@ -48,12 +48,18 @@ export function CredibilityView({
     const activeMarket = openPredictions[0]?.target || "UCL Real Madrid vs AC Milan";
 
     // Extract opinions for this market or build multi-analyst opinions
-    const opinions: MarketOpinion[] = [
-      { analyst: "@OptaTactics", pick: "RMA WIN & OVER 2.5", confidence: 4.5 },
-      { analyst: "@StatmanDaveFC", pick: "RMA WIN & OVER 2.5", confidence: 4.0 },
-      { analyst: "@EPLForecasterBeta", pick: "MILAN DRAW NO BET", confidence: 4.0 },
-      { analyst: "@UCLTacticsHub", pick: "RMA WIN & OVER 2.5", confidence: 4.2 },
-    ];
+    const opinions: MarketOpinion[] = openPredictions.length >= 2
+      ? openPredictions.slice(0, 4).map((p) => ({
+          analyst: p.analyst,
+          pick: p.pick,
+          confidence: p.confidence || 4,
+        }))
+      : [
+          { analyst: "@MacroQuant", pick: "RMA WIN & OVER 2.5", confidence: 4.5 },
+          { analyst: "@TacticsDesk", pick: "RMA WIN & OVER 2.5", confidence: 4.0 },
+          { analyst: "@PitchSignals", pick: "MILAN DRAW NO BET", confidence: 4.0 },
+          { analyst: "@AlphaForecaster", pick: "RMA WIN & OVER 2.5", confidence: 4.2 },
+        ];
 
     return consensus(activeMarket, opinions, weightsMap);
   }, [predictions, weightsMap]);

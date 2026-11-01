@@ -7,6 +7,7 @@ import { CoinLogo } from "@/components/ui/CoinLogo";
 import { TeamLogo } from "@/components/ui/TeamLogo";
 import { PredictionCategory, SportsFixtureRef, SportsMarketRef } from "@/lib/types";
 import { Fixture, SUPPORTED_LEAGUES } from "@/lib/espn";
+import { formatSportsPickSummary } from "@/lib/fixtures";
 
 interface AddPredictionSlideOverProps {
   isOpen: boolean;
@@ -112,7 +113,7 @@ export function AddPredictionSlideOver({
         const leagueParam = sportType === "nba" ? "nba" : selectedLeague;
         const res = await fetch(`/api/fixtures?sport=${sportParam}&league=${leagueParam}&days=7`);
         if (!res.ok) {
-          throw new Error("Jadwal tidak tersedia dari ESPN public scoreboard.");
+          throw new Error("Schedule unavailable from ESPN public scoreboard.");
         }
         const data = await res.json();
         if (isMounted) {
@@ -124,7 +125,7 @@ export function AddPredictionSlideOver({
         }
       } catch (err: unknown) {
         if (isMounted) {
-          const msg = err instanceof Error ? err.message : "Jadwal pertandingan tidak tersedia.";
+          const msg = err instanceof Error ? err.message : "Match schedule unavailable.";
           setFixturesError(msg);
           setFixtures([]);
         }
@@ -221,31 +222,25 @@ export function AddPredictionSlideOver({
             type: "moneyline",
             selection: moneylineSelection,
           };
-          const pickLabel =
-            moneylineSelection === "home"
-              ? `${selectedFixture.home.name} to Win`
-              : moneylineSelection === "away"
-              ? `${selectedFixture.away.name} to Win`
-              : "Draw";
           finalTarget = matchTitle;
-          finalPick = pickLabel;
+          finalPick = formatSportsPickSummary(selectedFixture.home.name, selectedFixture.away.name, structuredMarket, sportType);
         } else {
           // Total Over/Under
           const lineVal = parseFloat(totalLineInput.trim().replace(",", "."));
           if (isNaN(lineVal)) {
-            setFormError("Garis total harus berupa angka.");
+            setFormError("Total line must be a valid number.");
             return;
           }
           if (Math.abs(lineVal % 1) !== 0.5) {
-            setFormError("Garis total (line) wajib setengah angka (contoh: 2.5 atau 224.5) untuk mencegah push/seri.");
+            setFormError("Total line must be a half-number (e.g. 2.5 or 224.5) to avoid pushes/ties.");
             return;
           }
           if (sportType === "nba" && (lineVal < 100 || lineVal > 350)) {
-            setFormError("Garis total NBA harus berada di antara 100.5 dan 350.5.");
+            setFormError("NBA total line must be between 100.5 and 350.5.");
             return;
           }
           if (sportType === "soccer" && (lineVal < 0.5 || lineVal > 9.5)) {
-            setFormError("Garis total Soccer harus berada di antara 0.5 dan 9.5.");
+            setFormError("Soccer total line must be between 0.5 and 9.5.");
             return;
           }
 
@@ -255,7 +250,7 @@ export function AddPredictionSlideOver({
             line: lineVal,
           };
           finalTarget = matchTitle;
-          finalPick = `${totalSelection === "over" ? "Over" : "Under"} ${lineVal} Total Goals/Points`;
+          finalPick = formatSportsPickSummary(selectedFixture.home.name, selectedFixture.away.name, structuredMarket, sportType);
         }
 
         structuredFixture = {
@@ -551,7 +546,7 @@ export function AddPredictionSlideOver({
                     <Search className="w-3.5 h-3.5 text-[var(--muted)] absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="Cari nama tim..."
+                      placeholder="Search teams..."
                       value={fixtureSearch}
                       onChange={(e) => setFixtureSearch(e.target.value)}
                       className="w-full pl-8 pr-3 py-1.5 rounded-[6px] bg-[var(--card)] border border-[var(--border)] text-[var(--text)] text-xs placeholder:text-[var(--muted)]/50 focus:outline-none"
@@ -563,7 +558,7 @@ export function AddPredictionSlideOver({
                     {fixturesLoading ? (
                       <div className="py-8 text-center text-[var(--muted)] space-y-2">
                         <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto" />
-                        <p className="text-[11px]">Memuat jadwal pertandingan...</p>
+                        <p className="text-[11px]">Loading match schedule...</p>
                       </div>
                     ) : fixturesError ? (
                       <div className="py-6 text-center text-red-400 space-y-2">
@@ -574,18 +569,18 @@ export function AddPredictionSlideOver({
                           onClick={() => setIsManualEntry(true)}
                           className="text-[11px] text-[var(--accent)] underline font-medium"
                         >
-                          Isi manual
+                          Enter manually
                         </button>
                       </div>
                     ) : Object.keys(groupedFixtures).length === 0 ? (
                       <div className="py-8 text-center text-[var(--muted)] space-y-1">
-                        <p className="font-medium text-[11px]">Tidak ada pertandingan dalam 7 hari ke depan</p>
+                        <p className="font-medium text-[11px]">No matches found in the next 7 days</p>
                         <button
                           type="button"
                           onClick={() => setIsManualEntry(true)}
                           className="text-[11px] text-[var(--accent)] underline"
                         >
-                          Isi manual
+                          Enter manually
                         </button>
                       </div>
                     ) : (
@@ -631,7 +626,7 @@ export function AddPredictionSlideOver({
                   {selectedFixture && (
                     <div className="p-2.5 rounded-[8px] bg-[var(--card)] border border-[var(--accent)]/30 space-y-2.5">
                       <div className="text-[10px] text-[var(--accent)] uppercase font-semibold">
-                        Pasar Prediksi
+                        Market
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
@@ -644,7 +639,7 @@ export function AddPredictionSlideOver({
                               : "bg-[var(--bg)] border-[var(--border)] text-[var(--muted)]"
                           }`}
                         >
-                          Moneyline (Menang)
+                          Moneyline (Win)
                         </button>
                         <button
                           type="button"
@@ -683,7 +678,7 @@ export function AddPredictionSlideOver({
                                   : "bg-[var(--bg)] border-[var(--border)] text-[var(--muted)]"
                               }`}
                             >
-                              Seri (Draw)
+                              Draw
                             </button>
                           )}
 
@@ -711,7 +706,7 @@ export function AddPredictionSlideOver({
                                   : "bg-[var(--bg)] border-[var(--border)] text-[var(--muted)]"
                               }`}
                             >
-                              Over (Di Atas)
+                              Over
                             </button>
                             <button
                               type="button"
@@ -722,12 +717,12 @@ export function AddPredictionSlideOver({
                                   : "bg-[var(--bg)] border-[var(--border)] text-[var(--muted)]"
                               }`}
                             >
-                              Under (Di Bawah)
+                              Under
                             </button>
                           </div>
                           <div>
                             <label className="block text-[var(--muted)] mb-1 uppercase text-[9px]">
-                              Garis Total / Line (Wajib setengah angka, misal: {sportType === "nba" ? "224.5" : "2.5"})
+                              Total Line (Must be a half-number, e.g. {sportType === "nba" ? "224.5" : "2.5"})
                             </label>
                             <input
                               type="text"
@@ -743,19 +738,25 @@ export function AddPredictionSlideOver({
 
                       {/* Summary of structured pick */}
                       <div className="pt-2 border-t border-[var(--border)] text-[11px] font-mono-num space-y-0.5">
-                        <div className="text-[10px] text-[var(--muted)] uppercase font-semibold">Ringkasan Terstruktur</div>
+                        <div className="text-[10px] text-[var(--muted)] uppercase font-semibold">Summary</div>
                         <div className="text-[var(--text)]">
                           {selectedFixture.home.name} vs {selectedFixture.away.name} ({selectedFixture.leagueLabel})
                         </div>
                         <div className="text-[var(--accent)] font-semibold">
                           Pick:{" "}
                           {marketType === "moneyline"
-                            ? moneylineSelection === "home"
-                              ? `${selectedFixture.home.name} Menang`
-                              : moneylineSelection === "away"
-                              ? `${selectedFixture.away.name} Menang`
-                              : "Seri (Draw)"
-                            : `${totalSelection === "over" ? "Over" : "Under"} ${totalLineInput} Total`}
+                            ? formatSportsPickSummary(
+                                selectedFixture.home.name,
+                                selectedFixture.away.name,
+                                { type: "moneyline", selection: moneylineSelection },
+                                sportType
+                              )
+                            : formatSportsPickSummary(
+                                selectedFixture.home.name,
+                                selectedFixture.away.name,
+                                { type: "total", selection: totalSelection, line: parseFloat(totalLineInput.trim().replace(",", ".")) || 0 },
+                                sportType
+                              )}
                         </div>
                       </div>
                     </div>
@@ -767,7 +768,7 @@ export function AddPredictionSlideOver({
                       onClick={() => setIsManualEntry(true)}
                       className="text-[10px] text-[var(--muted)] hover:text-[var(--accent)] underline"
                     >
-                      Pertandingan tidak ada? Isi manual
+                      Can&apos;t find the match? Enter manually
                     </button>
                   </div>
                 </div>
@@ -777,13 +778,13 @@ export function AddPredictionSlideOver({
               {sportType !== "crypto" && isManualEntry && (
                 <div className="space-y-3 p-3.5 rounded-[10px] bg-[var(--bg)] border border-amber-500/30">
                   <div className="flex items-center justify-between text-amber-500 font-semibold text-[11px]">
-                    <span>Mode Entri Manual (Unverified Fixture)</span>
+                    <span>Manual Entry Mode (Unverified Fixture)</span>
                     <button
                       type="button"
                       onClick={() => setIsManualEntry(false)}
                       className="text-[10px] text-[var(--accent)] underline font-normal"
                     >
-                      Kembali ke Pemilih Pertandingan
+                      Back to Match Picker
                     </button>
                   </div>
 

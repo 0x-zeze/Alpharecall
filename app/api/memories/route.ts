@@ -3,7 +3,7 @@ import { getAllMemories, saveMemory, checkWalrusConnection } from "@/lib/walrus"
 import { getLatestSuiCheckpointAnchor } from "@/lib/tatum";
 import { MAX_PREDICTION_HORIZON_MS } from "@/lib/resolver";
 import type { PredictionCategory, SportsFixtureRef, SportsMarketRef } from "@/lib/types";
-import { getVerifiedFixtureById } from "@/lib/fixtures";
+import { getVerifiedFixtureById, formatSportsPickSummary } from "@/lib/fixtures";
 import { SUPPORTED_LEAGUES } from "@/lib/espn";
 import { isSeedAnalystHandle } from "@/lib/demo-data";
 
@@ -377,13 +377,7 @@ export async function POST(req: Request) {
           type: "moneyline",
           selection: mSelection as "home" | "away" | "draw",
         };
-        const winnerName =
-          mSelection === "home"
-            ? `${serverFixture.home.name} to Win`
-            : mSelection === "away"
-            ? `${serverFixture.away.name} to Win`
-            : "Draw";
-        finalPick = winnerName;
+        finalPick = formatSportsPickSummary(serverFixture.home.name, serverFixture.away.name, verifiedMarket, sport);
       } else {
         // Total Over/Under
         if (mSelection !== "over" && mSelection !== "under") {
@@ -416,7 +410,7 @@ export async function POST(req: Request) {
           selection: mSelection as "over" | "under",
           line,
         };
-        finalPick = `${mSelection === "over" ? "Over" : "Under"} ${line} Total Goals/Points`;
+        finalPick = formatSportsPickSummary(serverFixture.home.name, serverFixture.away.name, verifiedMarket, sport);
       }
 
       // Server takes control of title, target, deadline, and fixture data
@@ -473,7 +467,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             success: false,
-            error: "Anda sudah memiliki prediksi aktif pada pertandingan dan pasar ini.",
+            error: "You already have an active prediction for this fixture and market.",
             data: existingSports.record,
           },
           { status: 409 }

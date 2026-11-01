@@ -194,3 +194,24 @@ export async function getVerifiedFixtureById(
   if (!result.ok || !result.fixtures) return null;
   return result.fixtures.find((f) => f.eventId === eventId) || null;
 }
+
+/**
+ * Formats a clean English summary string for sports forecasts.
+ * e.g. "Cleveland Cavaliers to win" or "Over 215.5 total points"
+ */
+export function formatSportsPickSummary(
+  homeName: string,
+  awayName: string,
+  market: { type: "moneyline" | "total"; selection: string; line?: number },
+  sport: "nba" | "soccer" | string
+): string {
+  if (market.type === "moneyline") {
+    if (market.selection === "home") return `${homeName} to win`;
+    if (market.selection === "away") return `${awayName} to win`;
+    return "Draw";
+  }
+  const metric = sport === "nba" ? "total points" : "total goals";
+  const direction = market.selection === "over" ? "Over" : "Under";
+  return `${direction} ${market.line} ${metric}`;
+}
+
