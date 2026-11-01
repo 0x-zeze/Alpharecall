@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getAllMemories, saveMemory, checkWalrusConnection } from "@/lib/walrus";
 import { getLatestSuiCheckpointAnchor } from "@/lib/tatum";
 import { MAX_PREDICTION_HORIZON_MS } from "@/lib/resolver";
-import type { PredictionCategory } from "@/lib/types";
+import type { PredictionCategory, SportsFixtureRef, SportsMarketRef } from "@/lib/types";
+import { getVerifiedFixtureById } from "@/lib/fixtures";
+import { SUPPORTED_LEAGUES } from "@/lib/espn";
 
 // In-memory rate limiting (best-effort across serverless instances)
 interface RateLimitBucket {
@@ -143,12 +145,15 @@ export async function POST(req: Request) {
       odds,
       stake,
       confidence,
+      reasoning,
       sportType,
       deadline,
       direction,
       targetPrice,
       asset,
       clientRequestId,
+      fixture,
+      market,
     } = body;
 
     const now = Date.now();
@@ -209,6 +214,13 @@ export async function POST(req: Request) {
     // 7. Validate Crypto Deadline Requirements (Bagian 2)
     let parsedDeadlineIso: string | undefined = undefined;
     let validatedTargetPrice: number | undefined = undefined;
+    let verifiedFixture: SportsFixtureRef | undefined = undefined;
+    let verifiedMarket: SportsMarketRef | undefined = undefined;
+    let finalTarget = target.trim();
+    let finalPick = pick.trim();
+    let finalTitle = typeof title === "string" && title.trim() ? title.trim() : `${finalTarget}: ${finalPick}`;
+    const extraTags: string[] = [];
+
     if (categoryVal === "crypto") {
       if (!deadline || typeof deadline !== "string") {
         return NextResponse.json(
@@ -272,9 +284,148 @@ export async function POST(req: Request) {
         );
       }
       validatedTargetPrice = rawTp;
-    } else if (deadline && typeof deadline === "string") {
-      const dMs = Date.parse(deadline);
-      if (!isNaN(dMs)) parsedDeadlineIso = new Date(dMs).toISOString();
+    } else if (fixture && typeof fixture === "object") {
+      // FASE D: Structured Sports Fixture Validation
+      const f = fixture as Record<string, unknown>;
+      const eventId = String(f.eventId || "").trim();
+      const sport = f.sport as "nba" | "soccer";
+      const league = String(f.league || "").trim();
+
+      if (!eventId || !sport || !league || !SUPPORTED_LEAGUES[league] || SUPPORTED_LEAGUES[league].sport !== sport) {
+        return NextResponse.json(
+          { success: false, error: "Invalid sports fixture payload or unsupported league." },
+          { status: 400 }
+        );
+      }
+
+      // Cross-verify with ESPN scoreboard / cache
+      let serverFixture;
+      try {
+        serverFixture = await getVerifiedFixtureById(sport, league, eventId);
+      } catch {
+        return NextResponse.json(
+          { success: false, error: "ESPN scoreboard unreachable. Please try manual entry mode." },
+          { status: 503 }
+        );
+      }
+
+      if (!serverFixture) {
+        return NextResponse.json(
+          { success: false, error: "Fixture not found on ESPN public schedule or match already commenced." },
+          { status: 422 }
+        );
+      }
+
+      const kickoffMs = Date.parse(serverFixture.kickoff);
+      const MIN_BUFFER = 10 * 60 * 1000;
+      if (kickoffMs <= now + MIN_BUFFER) {
+        return NextResponse.json(
+          { success: false, error: "Cannot predict a match starting within 10 minutes or already past." },
+          { status: 422 }
+        );
+      }
+
+      if (kickoffMs > now + 14 * 24 * 60 * 60 * 1000) {
+        return NextResponse.json(
+          { success: false, error: "Kickoff cannot exceed 14 days into the future." },
+          { status: 400 }
+        );
+      }
+
+      // Validate market structure
+      if (!market || typeof market !== "object") {
+        return NextResponse.json(
+          { success: false, error: "Structured sports forecast requires a valid market." },
+          { status: 400 }
+        );
+      }
+
+      const m = market as Record<string, unknown>;
+      const mType = m.type;
+      const mSelection = String(m.selection || "").trim();
+
+      if (mType !== "moneyline" && mType !== "total") {
+        return NextResponse.json(
+          { success: false, error: "Invalid market type. Must be 'moneyline' or 'total'." },
+          { status: 400 }
+        );
+      }
+
+      if (mType === "moneyline") {
+        const allowedMoneyline = sport === "soccer" ? ["home", "away", "draw"] : ["home", "away"];
+        if (!allowedMoneyline.includes(mSelection)) {
+          return NextResponse.json(
+            { success: false, error: `Invalid moneyline selection '${mSelection}' for ${sport}.` },
+            { status: 400 }
+          );
+        }
+        verifiedMarket = {
+          type: "moneyline",
+          selection: mSelection as "home" | "away" | "draw",
+        };
+        const winnerName =
+          mSelection === "home"
+            ? `${serverFixture.home.name} to Win`
+            : mSelection === "away"
+            ? `${serverFixture.away.name} to Win`
+            : "Draw";
+        finalPick = winnerName;
+      } else {
+        // Total Over/Under
+        if (mSelection !== "over" && mSelection !== "under") {
+          return NextResponse.json(
+            { success: false, error: "Total market selection must be 'over' or 'under'." },
+            { status: 400 }
+          );
+        }
+        const line = typeof m.line === "number" ? m.line : parseFloat(String(m.line || ""));
+        if (isNaN(line) || Math.abs(line % 1) !== 0.5) {
+          return NextResponse.json(
+            { success: false, error: "Total market line must be a half-number (x.5) to avoid ties." },
+            { status: 400 }
+          );
+        }
+        if (sport === "nba" && (line < 100 || line > 350)) {
+          return NextResponse.json(
+            { success: false, error: "NBA total line must be between 100.5 and 350.5." },
+            { status: 400 }
+          );
+        }
+        if (sport === "soccer" && (line < 0.5 || line > 9.5)) {
+          return NextResponse.json(
+            { success: false, error: "Soccer total line must be between 0.5 and 9.5." },
+            { status: 400 }
+          );
+        }
+        verifiedMarket = {
+          type: "total",
+          selection: mSelection as "over" | "under",
+          line,
+        };
+        finalPick = `${mSelection === "over" ? "Over" : "Under"} ${line} Total Goals/Points`;
+      }
+
+      // Server takes control of title, target, deadline, and fixture data
+      parsedDeadlineIso = serverFixture.kickoff;
+      finalTarget = `${serverFixture.home.name} vs ${serverFixture.away.name}`;
+      finalTitle = `${serverFixture.home.name} vs ${serverFixture.away.name} (${serverFixture.leagueLabel}): ${finalPick}`;
+      verifiedFixture = {
+        provider: "espn",
+        eventId: serverFixture.eventId,
+        sport: serverFixture.sport,
+        league: serverFixture.league,
+        leagueLabel: serverFixture.leagueLabel,
+        kickoff: serverFixture.kickoff,
+        home: serverFixture.home,
+        away: serverFixture.away,
+      };
+    } else {
+      // Manual sports entry fallback
+      if (deadline && typeof deadline === "string") {
+        const dMs = Date.parse(deadline);
+        if (!isNaN(dMs)) parsedDeadlineIso = new Date(dMs).toISOString();
+      }
+      extraTags.push("unverified-fixture");
     }
 
     // 8. Security Hardening: Client cannot dictate outcome or credibility deltas!
@@ -287,7 +438,7 @@ export async function POST(req: Request) {
     const finalDirection: "above" | "below" = direction === "below" ? "below" : "above";
 
     // 8.1 Dedupe identical forecast (analyst + target + pick + deadline) within 60 seconds
-    const contentFingerprint = `${analystStr}|${target.trim()}|${pick.trim()}|${parsedDeadlineIso || "no-deadline"}`.toLowerCase();
+    const contentFingerprint = `${analystStr}|${finalTarget}|${finalPick}|${parsedDeadlineIso || "no-deadline"}`.toLowerCase();
     const existingContent = contentDedupeMap.get(contentFingerprint);
     if (existingContent && now - existingContent.timestamp <= CONTENT_DEDUPE_WINDOW_MS) {
       return NextResponse.json(
@@ -300,19 +451,35 @@ export async function POST(req: Request) {
       );
     }
 
+    // 8.2 Additional Sports duplicate gate (analyst + eventId + marketType + selection + line)
+    if (verifiedFixture && verifiedMarket) {
+      const sportsDupKey = `${analystStr}|${verifiedFixture.eventId}|${verifiedMarket.type}|${verifiedMarket.selection}|${verifiedMarket.line ?? "noline"}`.toLowerCase();
+      const existingSports = contentDedupeMap.get(sportsDupKey);
+      if (existingSports) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Anda sudah memiliki prediksi aktif pada pertandingan dan pasar ini.",
+            data: existingSports.record,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     // 9. Anchor Checkpoint from Tatum / Sui Gateway (Bagian 3)
     const anchor = await getLatestSuiCheckpointAnchor();
 
     // 10. Persist structured prediction to Walrus Memory
     const saved = await saveMemory({
-      title: title.trim(),
+      title: finalTitle,
       content:
         typeof content === "string" && content.trim().length > 0
           ? content.trim().slice(0, 500)
-          : `Forecast for ${target.trim()}: ${pick.trim()}`,
+          : `Forecast for ${finalTarget}: ${finalPick}`,
       analyst: analystStr,
-      target: target.trim(),
-      pick: pick.trim(),
+      target: finalTarget,
+      pick: finalPick,
       outcome: sanitizedOutcome,
       credibilityDelta: sanitizedDelta,
       pnl: sanitizedPnl,
@@ -321,6 +488,8 @@ export async function POST(req: Request) {
       odds: typeof odds === "string" ? odds.trim().slice(0, 20) : "-110",
       stake: stakeVal,
       confidence: confVal,
+      reasoning: typeof reasoning === "string" ? reasoning.slice(0, 1000) : undefined,
+      tags: extraTags.length > 0 ? extraTags : undefined,
       deadline: parsedDeadlineIso,
       direction: categoryVal === "crypto" ? finalDirection : (direction === "above" || direction === "below" ? direction : undefined),
       targetPrice: categoryVal === "crypto" ? validatedTargetPrice : (typeof targetPrice === "number" && !isNaN(targetPrice) ? targetPrice : undefined),
@@ -328,6 +497,8 @@ export async function POST(req: Request) {
       suiCheckpoint: anchor.checkpoint,
       suiCheckpointDigest: anchor.digest,
       suiCheckpointSource: anchor.source,
+      fixture: verifiedFixture,
+      market: verifiedMarket,
     });
 
     const sourceLabel =

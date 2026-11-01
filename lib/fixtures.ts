@@ -1,9 +1,8 @@
 import {
   SUPPORTED_LEAGUES,
   parseEspnEvent,
-  Fixture,
-  LeagueConfig,
 } from "./espn";
+import type { Fixture, LeagueConfig } from "./espn";
 
 export interface FixturesCacheEntry {
   fixtures: Fixture[];
