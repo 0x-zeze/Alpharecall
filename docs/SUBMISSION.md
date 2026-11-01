@@ -8,7 +8,7 @@ Submission materials and readiness verification for **Tatum x Walrus Hackathon (
 
 | Item | Value / Status | Verification Note |
 |---|---|---|
-| **Live Application URL** | [https://alpharecall.vercel.app](https://alpharecall.vercel.app) | Verified live on Vercel production |
+| **Live Application URL** | [https://walrecall.vercel.app](https://walrecall.vercel.app) | Verified live on Vercel production |
 | **Public Repository URL** | [https://github.com/0x-zeze/Alpharecall](https://github.com/0x-zeze/Alpharecall) | Branches `main` and `bento-redesign` in sync |
 | **Walkthrough Video (2-3 min)** | `TODO: Record and insert video URL (Loom or YouTube)` | Walk through forecast creation, Walrus blob proof, and consensus shift |
 | **Technical Blog Post** | `TODO: Publish and insert blog post URL (Medium, Mirror, or Dev.to)` | See outline at `docs/BLOG_OUTLINE.md` |

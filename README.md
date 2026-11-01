@@ -10,7 +10,7 @@ Decentralized prediction engine and forecaster credibility matrix that learns ov
 
 | Resource | Link | Notes |
 |---|---|---|
-| Live Web Application | [https://alpharecall.vercel.app](https://alpharecall.vercel.app) | Production deployment on Vercel |
+| Live Web Application | [https://walrecall.vercel.app](https://walrecall.vercel.app) | Production deployment on Vercel |
 | Source Code Repository | [https://github.com/0x-zeze/Alpharecall](https://github.com/0x-zeze/Alpharecall) | Branch `main` & `bento-redesign` |
 | Demo Video | `TODO: Add 2-3 minute walkthrough video` | Record UI walkthrough and resolution pass |
 | Technical Blog Post | `TODO: Add blog post URL after publication` | Overview of memory-driven consensus |
@@ -209,7 +209,7 @@ Automated settlement runs every 30 minutes via GitHub Actions: [`.github/workflo
 
 ### Required GitHub Secrets
 Under **Settings** -> **Secrets and variables** -> **Actions**:
-* `APP_URL`: Production URL starting strictly with `https://` (e.g. `https://alpharecall.vercel.app`). Non-HTTPS URLs fail closed.
+* `APP_URL`: Production URL starting strictly with `https://` (e.g. `https://walrecall.vercel.app`). Non-HTTPS URLs fail closed.
 * `CRON_SECRET`: Secret token matching the `CRON_SECRET` configured in Vercel.
 
 ---
