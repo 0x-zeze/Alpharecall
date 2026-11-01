@@ -129,6 +129,22 @@ async function main() {
       assert.equal(decoded?.targetPrice, undefined);
     });
 
+    await it("legacy memory string without suiCheckpointSource still decodes properly", () => {
+      const legacyRawMemory =
+        'ALPHARECALL_V1 {"version":"1.0","type":"resolution","predictionId":"rec-legacy-99","analyst":"@OptaTactics","category":"soccer","title":"Legacy Match","target":"RMA vs FCB","pick":"FCB DNB","odds":"+125","stake":300,"pnl":375,"outcome":"ACCURATE","delta":7,"confidence":5,"resolvedAt":"2024-10-26T19:00:00.000Z","suiCheckpoint":"340000000","suiCheckpointDigest":"0xdigest123"}';
+
+      const decoded = decodeMemory(legacyRawMemory);
+      assert.notEqual(decoded, null);
+      assert.equal(decoded?.predictionId, "rec-legacy-99");
+      assert.equal(decoded?.suiCheckpoint, "340000000");
+      assert.equal(decoded?.suiCheckpointDigest, "0xdigest123");
+      assert.equal(decoded?.suiCheckpointSource, null);
+
+      const record = payloadToPredictionRecord(decoded, "blob-99");
+      assert.equal(record.suiCheckpoint, "340000000");
+      assert.equal(record.suiCheckpointSource, null);
+    });
+
     await it("should reject corrupted, missing, or un-prefixed inputs", () => {
       assert.equal(decodeMemory('{"predictionId":"123"}'), null);
       assert.equal(decodeMemory("Just some random text"), null);
@@ -568,29 +584,155 @@ async function main() {
       assert.equal(status.version, "v3.18.3");
     });
 
-    await it("should return ok:false and null fields when Sui RPC returns an error or 404", async () => {
+    await it("gateway success -> source 'tatum-gateway', isTatumGateway true", async () => {
+      globalThis.fetch = async (url, opts) => {
+        const bodyStr = opts?.body ? String(opts.body) : "";
+        if (typeof url === "string" && url.includes("sui-mainnet.gateway.tatum.io")) {
+          if (bodyStr.includes("sui_getLatestCheckpointSequenceNumber")) {
+            return { ok: true, json: async () => ({ result: "340111222" }) };
+          }
+          if (bodyStr.includes("sui_getCheckpoint")) {
+            return { ok: true, json: async () => ({ result: { digest: "tatumDigest123" } }) };
+          }
+          if (bodyStr.includes("suix_getReferenceGasPrice")) {
+            return { ok: true, json: async () => ({ result: "750" }) };
+          }
+          if (bodyStr.includes("suix_getLatestSuiSystemState")) {
+            return { ok: true, json: async () => ({ result: { epoch: "1290" } }) };
+          }
+          if (bodyStr.includes("sui_getChainIdentifier")) {
+            return { ok: true, json: async () => ({ result: "chain_sui_mainnet" }) };
+          }
+        }
+        return { ok: false, status: 500 };
+      };
+
+      const chain = await getSuiChainMetrics();
+      assert.equal(chain.ok, true);
+      assert.equal(chain.status, "live");
+      assert.equal(chain.checkpoint, "340111222");
+      assert.equal(chain.checkpointDigest, "tatumDigest123");
+      assert.equal(chain.epoch, "1290");
+      assert.equal(chain.referenceGasPrice, "750 MIST");
+      assert.equal(chain.chainId, "chain_sui_mainnet");
+      assert.equal(chain.source, "tatum-gateway");
+      assert.equal(chain.isTatumGateway, true);
+
+      const anchor = await getLatestSuiCheckpointAnchor();
+      assert.equal(anchor.checkpoint, "340111222");
+      assert.equal(anchor.digest, "tatumDigest123");
+      assert.equal(anchor.source, "tatum-gateway");
+    });
+
+    await it("gateway 404 + GraphQL success -> source 'sui-graphql', isTatumGateway false", async () => {
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("gateway.tatum.io")) {
+          return {
+            ok: false,
+            status: 404,
+            text: async () => '{"statusCode": 404, "message": "Not Found"}',
+          };
+        }
+        if (typeof url === "string" && url.includes("graphql.mainnet.sui.io")) {
+          return {
+            ok: true,
+            json: async () => ({
+              data: {
+                checkpoint: {
+                  sequenceNumber: 340214800,
+                  digest: "9sGCvW8Tmc2cwPsGQrhaS1mfnVnrRWXnvRUH6qMXDNvU",
+                  epoch: {
+                    epochId: 1297,
+                    referenceGasPrice: "100",
+                  },
+                },
+                chainIdentifier: "4btiuiMPvEENsttpZC7CZ53DruC3MAgfznDbASZ7DR6S",
+              },
+            }),
+          };
+        }
+        return { ok: false, status: 500 };
+      };
+
+      const chain = await getSuiChainMetrics();
+      assert.equal(chain.ok, true);
+      assert.equal(chain.status, "live");
+      assert.equal(chain.checkpoint, "340214800");
+      assert.equal(chain.checkpointDigest, "9sGCvW8Tmc2cwPsGQrhaS1mfnVnrRWXnvRUH6qMXDNvU");
+      assert.equal(chain.epoch, "1297");
+      assert.equal(chain.referenceGasPrice, "100 MIST");
+      assert.equal(chain.chainId, "4btiuiMPvEENsttpZC7CZ53DruC3MAgfznDbASZ7DR6S");
+      assert.equal(chain.source, "sui-graphql");
+      assert.equal(chain.isTatumGateway, false);
+      assert.ok(chain.gatewayWarning?.includes("404"));
+
+      const anchor = await getLatestSuiCheckpointAnchor();
+      assert.equal(anchor.checkpoint, "340214800");
+      assert.equal(anchor.digest, "9sGCvW8Tmc2cwPsGQrhaS1mfnVnrRWXnvRUH6qMXDNvU");
+      assert.equal(anchor.source, "sui-graphql");
+    });
+
+    await it("both fail -> ok:false, source null, anchor null", async () => {
       globalThis.fetch = async () => ({
         ok: false,
-        status: 404,
+        status: 500,
+        text: async () => "Internal Server Error",
       });
 
       const chain = await getSuiChainMetrics();
       assert.equal(chain.ok, false);
       assert.equal(chain.status, "unavailable");
+      assert.equal(chain.source, null);
       assert.equal(chain.checkpoint, null);
-      assert.equal(chain.epoch, null);
-      assert.equal(chain.referenceGasPrice, null);
-    });
-
-    await it("should gracefully return null checkpoint anchor when RPC fails during prediction intake", async () => {
-      globalThis.fetch = async () => ({
-        ok: false,
-        status: 503,
-      });
 
       const anchor = await getLatestSuiCheckpointAnchor();
       assert.equal(anchor.checkpoint, null);
       assert.equal(anchor.digest, null);
+      assert.equal(anchor.source, null);
+    });
+
+    await it("GraphQL returns errors[] -> treated as failure", async () => {
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("gateway.tatum.io")) {
+          return { ok: false, status: 404, text: async () => "Not Found" };
+        }
+        if (typeof url === "string" && url.includes("graphql.mainnet.sui.io")) {
+          return {
+            ok: true,
+            json: async () => ({
+              errors: [{ message: "Cannot query field 'invalidField' on type 'Query'" }],
+            }),
+          };
+        }
+        return { ok: false, status: 500 };
+      };
+
+      const chain = await getSuiChainMetrics();
+      assert.equal(chain.ok, false);
+      assert.equal(chain.status, "unavailable");
+      assert.equal(chain.source, null);
+      assert.equal(chain.checkpoint, null);
+    });
+
+    await it("GraphQL timeout -> fails gracefully without hanging", async () => {
+      globalThis.fetch = async (url, opts) => {
+        if (typeof url === "string" && url.includes("gateway.tatum.io")) {
+          return { ok: false, status: 404, text: async () => "Not Found" };
+        }
+        if (typeof url === "string" && url.includes("graphql.mainnet.sui.io")) {
+          assert.ok(opts?.signal, "GraphQL call must pass an AbortSignal");
+          const err = new Error("The operation was aborted");
+          err.name = "AbortError";
+          throw err;
+        }
+        return { ok: false, status: 500 };
+      };
+
+      const chain = await getSuiChainMetrics();
+      assert.equal(chain.ok, false);
+      assert.equal(chain.status, "unavailable");
+      assert.equal(chain.source, null);
+      assert.equal(chain.checkpoint, null);
     });
 
     globalThis.fetch = originalFetch;
