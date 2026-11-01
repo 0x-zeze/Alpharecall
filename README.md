@@ -69,6 +69,7 @@ flowchart TD
 | **Tatum Sui JSON-RPC Gateway** | Secondary fallback attempt (`sui-mainnet.gateway.tatum.io`), currently returns 404 on Sui JSON-RPC. | `lib/tatum.ts` |
 | **Tatum Data API v3** | Live crypto exchange rate queries (`/v3/tatum/rate/{symbol}?basePair=USD`) for resolving target prices at deadline. | `lib/tatum.ts`, `lib/resolver.ts` |
 | **Tatum Gateway Version API** | Gateway metadata monitoring (tier, usage, latency, version). | `lib/tatum.ts`, `app/api/tatum/route.ts` |
+| **ESPN Public Scoreboard (Unofficial)** *(Non-Tatum)* | Unofficial endpoint for upcoming match fixtures, final scores, and team logos (`site.api.espn.com`). Team logos belong to their respective copyright holders and are loaded directly from the ESPN CDN (`a.espncdn.com`). Crypto coin icons are vendored locally under CC0-1.0 (`public/coins/README.md`). | `lib/espn.ts`, `lib/fixtures.ts`, `lib/sports-resolver.ts` |
 | **Sui Mainnet GraphQL** *(Non-Tatum)* | Tertiary fallback for Sui checkpoint telemetry (`https://graphql.mainnet.sui.io/graphql`) when Tatum gateways are unreachable. | `lib/tatum.ts` |
 | **Walrus Memory SDK** *(Non-Tatum)* | Client-side memory SDK (`@mysten-incubation/memwal`) used to store, update, and recall immutable prediction records. | `lib/walrus.ts` |
 | **Walrus Hosted Relayer** *(Non-Tatum)* | Ephemeral write relayer (`https://relayer.memory.walrus.xyz`) processing onchain blob storage on Sui mainnet. | `lib/walrus.ts` |
@@ -128,7 +129,7 @@ The 16 historical seed records in AlphaRecall are committed to Walrus Mainnet st
 ## Known Limitations
 
 * **Forecaster Identity (Text Handles):** Analyst handles (e.g. `@OptaTactics`) are currently user-specified text strings without cryptographic wallet signatures per post. Production implementations will require Sui wallet signatures.
-* **Sports Match Settlement:** Automated settlement is fully implemented for crypto markets via Tatum Data API. Sports matches currently require manual outcome verification.
+* **Sports Match Settlement:** Automated settlement is fully implemented for crypto markets via Tatum Data API. Sports auto-resolve is available via unofficial ESPN scoreboards behind the `ENABLE_SPORTS_AUTORESOLVE=true` flag. Matches with extra time or penalties (AET/PEN) require manual verification, and total markets strictly require half-numbers (x.5) to prevent ambiguous push outcomes. The ESPN scoreboard API is unofficial and operates without an SLA.
 * **Serverless In-Memory State:** Rate limit counters and deduplication caches reside in Node.js runtime memory. In distributed serverless multi-region deployments, an external store like Redis is recommended for distributed consistency.
 * **Spot Grace Window vs Historical Tick:** Settlement uses spot rates queried during a 6-hour grace window (`RESOLVER_GRACE_WINDOW_MS = 6h`) following deadline rather than tick-level historical prices. Predictions evaluated after the grace window expire unresolved.
 * **Permanent Early Test Blobs:** Submissions executed during early test phases before the 60-second duplicate gate resulted in permanent `@AlphaOne` duplicate blobs on Walrus. These are deduplicated at read time via `dedupePredictions()` without data corruption.
@@ -169,6 +170,7 @@ cp .env.example .env.local
 | `ADMIN_SECRET` | Secret header for `/api/seed` endpoint | Yes (Prod) | `your_admin_secret` |
 | `ALLOW_PUBLIC_ORACLE_FALLBACK` | Allow CoinGecko fallback when Tatum is down | Optional | `false` |
 | `NEXT_PUBLIC_ENABLE_SEED` | Show UI button for seed trigger in Sidebar | Optional | `false` |
+| `ENABLE_SPORTS_AUTORESOLVE` | Enable ESPN match auto-resolve for sports | Optional | `false` |
 
 ### 4. Generate Delegate Key (Helper)
 Generate a fresh Ed25519 keypair for Walrus Memory delegation:
