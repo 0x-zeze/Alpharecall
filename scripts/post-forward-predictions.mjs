@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Helper to submit forward-looking crypto forecasts to AlphaRecall via the application API.
+ * Helper to submit forward-looking crypto forecasts to WalRecall via the application API.
  * Uses genuine future deadlines (24h to 7 days ahead) so they can be settled dynamically
  * via Tatum Data API once their respective deadlines mature.
  *

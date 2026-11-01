@@ -112,7 +112,7 @@ export async function fetchEspnGameStatus(
 
   try {
     const res = await customFetch(url, {
-      headers: { "User-Agent": "AlphaRecall/1.0" },
+      headers: { "User-Agent": "WalRecall/1.0" },
       signal: controller.signal,
       cache: "no-store",
     });

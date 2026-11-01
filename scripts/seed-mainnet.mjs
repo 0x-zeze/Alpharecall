@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * AlphaRecall - Authentic Walrus Memory Mainnet Seeder
+ * WalRecall - Authentic Walrus Memory Mainnet Seeder
  * Writes the canonical real-world settlement records to Walrus Mainnet.
  * Stores verified receipts (blobId, jobId, timestamp, text) to seed-receipts.json.
  * Never outputs fake hashes or Math.random().

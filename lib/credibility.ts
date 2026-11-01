@@ -72,7 +72,7 @@ export function computeForecasterStats(records: PredictionRecord[]): ForecasterA
   >();
 
   for (const r of cleanRecords) {
-    if (!r.analyst || r.analyst.startsWith("AlphaRecall Consensus")) continue;
+    if (!r.analyst || r.analyst.startsWith("WalRecall Consensus") || r.analyst.startsWith("AlphaRecall Consensus")) continue;
 
     const existing = map.get(r.analyst) || {
       handle: r.analyst,

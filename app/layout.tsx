@@ -19,7 +19,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "AlphaRecall — Prediction Journal & Credibility Engine",
+  title: "WalRecall — Prediction Journal & Credibility Engine",
   description: "Minimalist Bento Grid Dashboard for Sports & Crypto Predictions powered by Tatum Sui RPC and Walrus Memory on Mainnet.",
 };
 

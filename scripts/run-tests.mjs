@@ -68,7 +68,7 @@ async function describe(title, fn) {
 
 async function main() {
   console.log("=================================================");
-  console.log("  ALPHARECALL COMPREHENSIVE TEST SUITE           ");
+  console.log("  WALRECALL COMPREHENSIVE TEST SUITE           ");
   console.log("=================================================");
 
   // --------------------------------------------------------------------------

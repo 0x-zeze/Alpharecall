@@ -1,4 +1,4 @@
-# Technical Blog Post Outline: AlphaRecall
+# Technical Blog Post Outline: WalRecall
 
 *How Walrus Memory and Tatum Data APIs Turn Prediction Markets into Adaptive Intelligence Engines.*
 
@@ -7,7 +7,7 @@
 ## 1. Introduction: The Amnesia Problem in Forecasting
 - **The Core Issue:** Traditional prediction platforms, tipping sites, and AI trading analysts have no persistent onchain memory.
 - **The Consequence:** Analysts who make high-risk, low-accuracy calls are forgotten within weeks. Community sentiment remains an unweighted headcount vulnerable to loudest-voice bias.
-- **The AlphaRecall Vision:** Give prediction markets immutable memory so forecaster credibility accumulates permanently across sessions.
+- **The WalRecall Vision:** Give prediction markets immutable memory so forecaster credibility accumulates permanently across sessions.
 
 ---
 
@@ -19,7 +19,7 @@
 - **Tatum Integration:**
   - **Sui gRPC Gateway (`sui-mainnet-grpc.gateway.tatum.io:443`):** Sub-second retrieval of Sui checkpoint sequence and digest over HTTP/2 TLS to anchor creation time.
   - **Tatum Data API v3:** Direct spot rate resolution for crypto markets (`/v3/tatum/rate/{symbol}?basePair=USD`).
-  - **Failover Chain:** How AlphaRecall falls back gracefully through Tatum gRPC -> Tatum JSON-RPC -> Sui GraphQL while preserving 100% honest attribution.
+  - **Failover Chain:** How WalRecall falls back gracefully through Tatum gRPC -> Tatum JSON-RPC -> Sui GraphQL while preserving 100% honest attribution.
 
 ---
 

@@ -106,7 +106,7 @@ export async function getUpcomingFixtures(
 
       try {
         const res = await fetchFn(url, {
-          headers: { "User-Agent": "AlphaRecall/1.0 (Hackathon Predictor)" },
+          headers: { "User-Agent": "WalRecall/1.0 (Hackathon Predictor)" },
           signal: controller.signal,
           cache: "no-store",
         });

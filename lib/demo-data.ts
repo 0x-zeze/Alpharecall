@@ -1,7 +1,7 @@
 import type { PredictionRecord } from "./types";
 
 /**
- * Canonical Demo Dataset for AlphaRecall.
+ * Canonical Demo Dataset for WalRecall.
  * Used when Walrus Memory credentials are not provided or offline.
  * Every record has source: "demo", writeStatus: "local-demo", and NO fake blobId.
  */

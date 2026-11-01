@@ -1,4 +1,4 @@
-# Hackathon Submission Checklist: AlphaRecall
+# Hackathon Submission Checklist: WalRecall
 
 Submission materials and readiness verification for **Tatum x Walrus Hackathon (Total Recall)** — *Track 1: Markets & Sports Prediction*.
 

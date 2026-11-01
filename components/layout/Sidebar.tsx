@@ -79,7 +79,7 @@ export function Sidebar({
             Ω
           </div>
           <div className="min-w-0 leading-tight">
-            <h1 className="font-bold text-sm text-[var(--text)] tracking-tight">AlphaRecall</h1>
+            <h1 className="font-bold text-sm text-[var(--text)] tracking-tight">WalRecall</h1>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
@@ -127,7 +127,7 @@ export function Sidebar({
                 <div className="w-8 h-8 rounded-[10px] bg-[var(--card)] border border-[var(--border)] flex items-center justify-center font-mono-num font-bold text-sm text-[var(--accent)]">
                   Ω
                 </div>
-                <h2 className="font-bold text-sm text-[var(--text)]">AlphaRecall</h2>
+                <h2 className="font-bold text-sm text-[var(--text)]">WalRecall</h2>
               </div>
               <button
                 ref={closeRef}
@@ -202,7 +202,7 @@ export function Sidebar({
             Ω
           </div>
           <div className="leading-tight">
-            <h1 className="font-bold text-sm text-[var(--text)] tracking-tight">AlphaRecall</h1>
+            <h1 className="font-bold text-sm text-[var(--text)] tracking-tight">WalRecall</h1>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${

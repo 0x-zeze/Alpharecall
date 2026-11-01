@@ -1,4 +1,4 @@
-# AlphaRecall
+# WalRecall
 
 Decentralized prediction engine and forecaster credibility matrix that learns over time.
 
@@ -20,7 +20,7 @@ Decentralized prediction engine and forecaster credibility matrix that learns ov
 
 ## What It Does
 
-Traditional prediction markets and sports tipping platforms suffer from amnesia because predictions and past track records are siloed in ephemeral databases that can be silently edited or reset. AlphaRecall solves this by persisting every prediction and resolution immutably to Walrus Memory on Sui mainnet. At maturity, forecasts are verified against authentic market rates, generating an explicit accuracy delta. A deterministic mathematical scoring engine computes dynamic credibility weights (0.40x to 2.40x) from historical resolution memories. Future market consensus scales by these weights, naturally boosting verified sharps while dampening reckless forecasters.
+Traditional prediction markets and sports tipping platforms suffer from amnesia because predictions and past track records are siloed in ephemeral databases that can be silently edited or reset. WalRecall solves this by persisting every prediction and resolution immutably to Walrus Memory on Sui mainnet. At maturity, forecasts are verified against authentic market rates, generating an explicit accuracy delta. A deterministic mathematical scoring engine computes dynamic credibility weights (0.40x to 2.40x) from historical resolution memories. Future market consensus scales by these weights, naturally boosting verified sharps while dampening reckless forecasters.
 
 ---
 
@@ -52,7 +52,7 @@ flowchart TD
 
 ## What Is Live vs Backtest
 
-| Dataset Type | Scope & Origin | Verification Status | Role in AlphaRecall |
+| Dataset Type | Scope & Origin | Verification Status | Role in WalRecall |
 |---|---|---|---|
 | **Historical Backtest Seeds** | 16 records from real October 2024 fixtures (El Clasico, Premier League, NBA, Sui spot breakout). Fictional analyst handles (`@OptaTactics`, `@MacroCryptoQuant`, etc.). | Written to Walrus Mainnet. Carries authentic `blobId` receipts on Walruscan. | Establishes the initial credibility variance and demonstrates how memory shifts consensus. |
 | **Live User Forecasts** | New predictions submitted during the hackathon via the slide-over form. | Stored with status `PENDING` and delta `0`. Crypto forecasts require future deadline $\le 30$ days. | Demonstrates end-to-end forward resolution and onchain memory creation in real time. |
@@ -78,7 +78,7 @@ flowchart TD
 
 ## Verified Walrus Mainnet Blobs
 
-The 16 historical seed records in AlphaRecall are committed to Walrus Mainnet storage nodes. Every record is verifiable via the public explorer:
+The 16 historical seed records in WalRecall are committed to Walrus Mainnet storage nodes. Every record is verifiable via the public explorer:
 
 | # | Prediction ID | Match / Market Event | Walrus Mainnet Blob ID | Explorer Link |
 |---|---|---|---|---|
