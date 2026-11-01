@@ -15,6 +15,40 @@ let globalBucket = { count: 0, resetAt: Date.now() + 24 * 60 * 60 * 1000 };
 const MAX_PER_IP_HOURLY = 30;
 const MAX_GLOBAL_DAILY = 200;
 
+/**
+ * In-memory idempotency and deduplication caches.
+ * Note on Serverless Architecture:
+ * On serverless platforms (such as Vercel), in-memory maps are best-effort and persist
+ * only within a warm lambda container instance. For distributed multi-region consistency,
+ * an external persistence layer such as Upstash Redis or durable KV is recommended.
+ */
+interface ProcessedRequestRecord {
+  responsePayload: Record<string, unknown>;
+  timestamp: number;
+}
+const requestIdCache = new Map<string, ProcessedRequestRecord>();
+const REQUEST_ID_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+interface ContentDedupeEntry {
+  record: unknown;
+  timestamp: number;
+}
+const contentDedupeMap = new Map<string, ContentDedupeEntry>();
+const CONTENT_DEDUPE_WINDOW_MS = 60 * 1000; // 60 seconds
+
+function pruneDedupeCaches(now: number) {
+  requestIdCache.forEach((entry, id) => {
+    if (now - entry.timestamp > REQUEST_ID_TTL_MS) {
+      requestIdCache.delete(id);
+    }
+  });
+  contentDedupeMap.forEach((entry, key) => {
+    if (now - entry.timestamp > CONTENT_DEDUPE_WINDOW_MS) {
+      contentDedupeMap.delete(key);
+    }
+  });
+}
+
 function checkRateLimit(ip: string): { allowed: boolean; message?: string } {
   const now = Date.now();
 
@@ -114,7 +148,20 @@ export async function POST(req: Request) {
       direction,
       targetPrice,
       asset,
+      clientRequestId,
     } = body;
+
+    const now = Date.now();
+    pruneDedupeCaches(now);
+
+    // 2.1 Dedupe by clientRequestId (10-minute idempotency cache)
+    const clientReqId = typeof clientRequestId === "string" ? clientRequestId.trim() : "";
+    if (clientReqId) {
+      const cached = requestIdCache.get(clientReqId);
+      if (cached && now - cached.timestamp <= REQUEST_ID_TTL_MS) {
+        return NextResponse.json(cached.responsePayload);
+      }
+    }
 
     // 3. Strict String & Field Validations
     if (!title || typeof title !== "string" || title.trim().length === 0 || title.length > 120) {
@@ -239,6 +286,20 @@ export async function POST(req: Request) {
     const assetStr = typeof asset === "string" && asset.trim().length > 0 ? asset.trim().slice(0, 20) : "SUI";
     const finalDirection: "above" | "below" = direction === "below" ? "below" : "above";
 
+    // 8.1 Dedupe identical forecast (analyst + target + pick + deadline) within 60 seconds
+    const contentFingerprint = `${analystStr}|${target.trim()}|${pick.trim()}|${parsedDeadlineIso || "no-deadline"}`.toLowerCase();
+    const existingContent = contentDedupeMap.get(contentFingerprint);
+    if (existingContent && now - existingContent.timestamp <= CONTENT_DEDUPE_WINDOW_MS) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Duplicate prediction: an identical forecast was already submitted within the last 60 seconds.",
+          data: existingContent.record,
+        },
+        { status: 409 }
+      );
+    }
+
     // 9. Anchor Checkpoint from Tatum / Sui Gateway (Bagian 3)
     const anchor = await getLatestSuiCheckpointAnchor();
 
@@ -276,13 +337,27 @@ export async function POST(req: Request) {
         ? " via Sui GraphQL"
         : "";
 
-    return NextResponse.json({
+    const responsePayload = {
       success: true,
       data: saved,
       status: saved.writeStatus,
       blobId: saved.blobId,
       suiAnchor: anchor.checkpoint ? `#${anchor.checkpoint}${sourceLabel}` : "not anchored",
+    };
+
+    if (clientReqId) {
+      requestIdCache.set(clientReqId, {
+        responsePayload,
+        timestamp: now,
+      });
+    }
+
+    contentDedupeMap.set(contentFingerprint, {
+      record: saved,
+      timestamp: now,
     });
+
+    return NextResponse.json(responsePayload);
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     return NextResponse.json(

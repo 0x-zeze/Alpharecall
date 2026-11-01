@@ -145,6 +145,7 @@ export default function Home() {
     direction?: "above" | "below";
     targetPrice?: number;
     asset?: string;
+    clientRequestId?: string;
   }) => {
     try {
       const res = await fetch("/api/memories", {
@@ -165,6 +166,7 @@ export default function Home() {
           direction: data.direction,
           targetPrice: data.targetPrice,
           asset: data.asset,
+          clientRequestId: data.clientRequestId,
         }),
       });
 

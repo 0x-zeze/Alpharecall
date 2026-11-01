@@ -143,7 +143,7 @@ export async function getAllMemories(): Promise<MemoryRecord[]> {
  * - If client is missing: writeStatus: "local-demo" without blobId.
  * - If remember fails: writeStatus: "failed" with explicit writeError.
  */
-export async function saveMemory(record: Partial<MemoryRecord> & {
+export type SaveMemoryInput = Partial<MemoryRecord> & {
   title: string;
   content: string;
   analyst: string;
@@ -151,7 +151,19 @@ export async function saveMemory(record: Partial<MemoryRecord> & {
   pick: string;
   outcome: "PENDING" | "ACCURATE" | "FAILED";
   credibilityDelta: number;
-}): Promise<MemoryRecord> {
+};
+
+let customSaveMemory: ((record: SaveMemoryInput) => Promise<MemoryRecord>) | null = null;
+
+export function setCustomSaveMemory(fn: ((record: SaveMemoryInput) => Promise<MemoryRecord>) | null) {
+  customSaveMemory = fn;
+}
+
+export async function saveMemory(record: SaveMemoryInput): Promise<MemoryRecord> {
+  if (customSaveMemory) {
+    return customSaveMemory(record);
+  }
+
   const newRecord: MemoryRecord = {
     id: record.id || `rec-${Date.now()}`,
     category: record.category || "prediction",

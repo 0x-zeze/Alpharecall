@@ -28,6 +28,7 @@ import {
 } from "../lib/tatum.ts";
 import { dedupePredictions } from "../lib/dedupe.ts";
 import { DEMO_PREDICTIONS } from "../lib/demo-data.ts";
+import { setCustomSaveMemory } from "../lib/walrus.ts";
 import {
   SIMULATED_STARTING_BANKROLL,
   activeRisk,
@@ -894,6 +895,103 @@ async function main() {
       assert.equal(res.status, 400);
       assert.equal(json.success, false);
       assert.equal(json.error?.includes("Analyst handle must start with '@'"), true);
+    });
+
+    await it("clientRequestId deduplication: two POSTs with same clientRequestId -> only one saveMemory write", async () => {
+      let saveCount = 0;
+      setCustomSaveMemory(async (record) => {
+        saveCount++;
+        return {
+          id: "rec-dedupe-test-01",
+          category: "prediction",
+          sportType: record.sportType,
+          title: record.title,
+          content: record.content,
+          analyst: record.analyst,
+          target: record.target,
+          pick: record.pick,
+          odds: record.odds,
+          stake: record.stake,
+          pnl: 0,
+          outcome: "PENDING",
+          credibilityDelta: 0,
+          confidence: 4,
+          timestamp: Date.now(),
+          dateStr: "Nov 1",
+          writeStatus: "confirmed",
+          source: "walrus",
+        };
+      });
+
+      const clientRequestId = "req-uuid-test-" + Date.now();
+      const payload = {
+        title: "Dedupe Request Test",
+        target: "BTC/USDT Breakout",
+        pick: "BTC > $70000",
+        analyst: "@DedupeTester",
+        sportType: "soccer", // soccer so deadline is optional
+        clientRequestId,
+      };
+
+      const req1 = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const res1 = await postMemory(req1);
+      const json1 = await res1.json();
+      assert.equal(res1.status, 200);
+      assert.equal(json1.success, true);
+      assert.equal(saveCount, 1);
+
+      // Second identical request with same clientRequestId
+      const req2 = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const res2 = await postMemory(req2);
+      const json2 = await res2.json();
+      assert.equal(res2.status, 200);
+      assert.equal(json2.success, true);
+      assert.equal(saveCount, 1); // Crucial invariant: saveMemory is NOT called a second time!
+      assert.equal(json2.data.id, "rec-dedupe-test-01");
+
+      // Reset mock
+      setCustomSaveMemory(null);
+    });
+
+    await it("duplicate forecast (analyst + target + pick + deadline) within 60s returns HTTP 409", async () => {
+      const payload = {
+        title: "Duplicate Check Test",
+        target: "Arsenal vs Chelsea",
+        pick: "Arsenal ML",
+        analyst: "@UniqueAnalyst",
+        sportType: "soccer",
+      };
+
+      const req1 = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const res1 = await postMemory(req1);
+      assert.equal(res1.status, 200);
+
+      // Second request with different clientRequestId, but identical forecast within 60 seconds
+      const req2 = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...payload,
+          clientRequestId: "different-id-" + Math.random(),
+        }),
+      });
+      const res2 = await postMemory(req2);
+      const json2 = await res2.json();
+      assert.equal(res2.status, 409);
+      assert.equal(json2.success, false);
+      assert.ok(json2.error?.includes("Duplicate prediction"));
     });
 
     await it("should reject cron resolution GET /api/resolve when CRON_SECRET is missing or wrong (fail-closed)", async () => {

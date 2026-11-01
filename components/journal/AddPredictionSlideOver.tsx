@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Zap, Shield, Sparkles, AlertCircle } from "lucide-react";
 import { PredictionCategory } from "@/lib/types";
@@ -21,6 +21,7 @@ interface AddPredictionSlideOverProps {
     direction?: "above" | "below";
     targetPrice?: number;
     asset?: string;
+    clientRequestId?: string;
   }) => Promise<{ success: boolean; error?: string } | void>;
 }
 
@@ -38,7 +39,20 @@ export function AddPredictionSlideOver({
   const [confidence, setConfidence] = useState<number>(4);
   const [reasoning, setReasoning] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const clientRequestIdRef = useRef<string>("");
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Generate a unique clientRequestId whenever the slide-over opens
+  useEffect(() => {
+    if (isOpen) {
+      clientRequestIdRef.current =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `req-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      isSubmittingRef.current = false;
+    }
+  }, [isOpen]);
 
   // Crypto Forecast Specific Fields (Bagian 2)
   const [deadline, setDeadline] = useState(() =>
@@ -50,6 +64,8 @@ export function AddPredictionSlideOver({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
+
     setFormError(null);
 
     let finalTarget = target.trim();
@@ -85,6 +101,7 @@ export function AddPredictionSlideOver({
       }
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       const deadlineIso = sportType === "crypto" && deadline ? new Date(deadline).toISOString() : undefined;
@@ -101,6 +118,7 @@ export function AddPredictionSlideOver({
         direction: sportType === "crypto" ? direction : undefined,
         targetPrice: sportType === "crypto" ? parsedTargetPrice : undefined,
         asset: sportType === "crypto" ? asset : undefined,
+        clientRequestId: clientRequestIdRef.current,
       });
 
       if (res && !res.success && res.error) {
@@ -119,6 +137,7 @@ export function AddPredictionSlideOver({
       const msg = err instanceof Error ? err.message : "Failed to record prediction";
       setFormError(msg);
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

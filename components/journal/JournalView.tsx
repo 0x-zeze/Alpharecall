@@ -36,6 +36,7 @@ interface JournalViewProps {
     direction?: "above" | "below";
     targetPrice?: number;
     asset?: string;
+    clientRequestId?: string;
   }) => Promise<{ success: boolean; error?: string } | void>;
   onRefresh?: () => Promise<void> | void;
 }
