@@ -11,7 +11,7 @@ Decentralized prediction engine and forecaster credibility matrix that learns ov
 | Resource | Link | Notes |
 |---|---|---|
 | Live Web Application | [https://walrecall.vercel.app](https://walrecall.vercel.app) | Production deployment on Vercel |
-| Source Code Repository | [https://github.com/0x-zeze/Alpharecall](https://github.com/0x-zeze/Alpharecall) | Branch `main` & `bento-redesign` |
+| Source Code Repository | [https://github.com/0x-zeze/WalRecall](https://github.com/0x-zeze/WalRecall) | Branch `main` & `bento-redesign` |
 | Demo Video | `TODO: Add 2-3 minute walkthrough video` | Record UI walkthrough and resolution pass |
 | Technical Blog Post | `TODO: Add blog post URL after publication` | Overview of memory-driven consensus |
 | Walruscan Mainnet Explorer | [https://walruscan.com/mainnet](https://walruscan.com/mainnet) | Verify onchain blobs |
@@ -144,8 +144,8 @@ The 16 historical seed records in WalRecall are committed to Walrus Mainnet stor
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/0x-zeze/Alpharecall.git
-cd Alpharecall
+git clone https://github.com/0x-zeze/WalRecall.git
+cd WalRecall
 ```
 
 ### 2. Install Dependencies
