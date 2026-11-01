@@ -32,6 +32,10 @@ import { setCustomSaveMemory } from "../lib/walrus.ts";
 import * as grpc from "@grpc/grpc-js";
 import { getSuiLedgerPackageDefinition } from "../lib/sui-grpc.ts";
 import {
+  parseEspnEvent,
+  validateLogoUrl,
+} from "../lib/espn.ts";
+import {
   SIMULATED_STARTING_BANKROLL,
   activeRisk,
   countOnChainBlobs,
@@ -40,6 +44,7 @@ import {
   isBacktestRecord,
   countLiveVsBacktest,
 } from "../lib/dashboard-stats.ts";
+import { settleMarket } from "../lib/sports-resolver.ts";
 
 let passed = 0;
 let failed = 0;
@@ -1830,6 +1835,435 @@ async function main() {
       // Live: rec-1730000000000, rec-1730000000001, live-alpha (3)
       assert.equal(counts.backtest, 3);
       assert.equal(counts.live, 3);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // SUITE 9: Sports Fixture Parsing, Market Settle & Auto-Resolve Invariants
+  // --------------------------------------------------------------------------
+  await describe("ESPN Fixtures, Sports Market Settlement & Auto-Resolve", async () => {
+    const { GET: getFixturesRoute } = await import("../app/api/fixtures/route.ts");
+    const { POST: postMemory } = await import("../app/api/memories/route.ts");
+
+    await it("validateLogoUrl strictly allows only https://a.espncdn.com", () => {
+      assert.equal(
+        validateLogoUrl("https://a.espncdn.com/i/teamlogos/nba/500/scoreboard/utah.png"),
+        "https://a.espncdn.com/i/teamlogos/nba/500/scoreboard/utah.png"
+      );
+      assert.equal(validateLogoUrl("http://a.espncdn.com/insecure.png"), null); // HTTP disallowed
+      assert.equal(validateLogoUrl("https://evil.com/fake.png"), null); // Foreign host disallowed
+      assert.equal(validateLogoUrl("https://a.espncdn.com.attacker.com/logo.png"), null);
+      assert.equal(validateLogoUrl(""), null);
+      assert.equal(validateLogoUrl(null), null);
+    });
+
+    await it("parseEspnEvent tolerantly parses valid future games and rejects past/near-kickoff", () => {
+      const fixedNow = 1730000000000; // Reference time
+      const validFutureKickoff = new Date(fixedNow + 2 * 3600 * 1000).toISOString(); // +2 hours
+
+      const mockEvent = {
+        id: "401909896",
+        date: validFutureKickoff,
+        status: { type: { state: "pre" } },
+        competitions: [
+          {
+            venue: { fullName: "Delta Center" },
+            competitors: [
+              {
+                homeAway: "home",
+                team: {
+                  id: "26",
+                  displayName: "Utah Jazz",
+                  shortDisplayName: "Jazz",
+                  abbreviation: "UTA",
+                  logo: "https://a.espncdn.com/i/teamlogos/nba/500/scoreboard/utah.png",
+                },
+              },
+              {
+                homeAway: "away",
+                team: {
+                  id: "22",
+                  displayName: "Portland Trail Blazers",
+                  shortDisplayName: "Blazers",
+                  abbreviation: "POR",
+                  logo: "https://a.espncdn.com/i/teamlogos/nba/500/scoreboard/por.png",
+                },
+              },
+            ],
+          },
+        ],
+      };
+
+      const parsed = parseEspnEvent(mockEvent, "nba", "nba", "NBA", fixedNow);
+      assert.notEqual(parsed, null);
+      assert.equal(parsed?.eventId, "401909896");
+      assert.equal(parsed?.home.name, "Utah Jazz");
+      assert.equal(parsed?.away.name, "Portland Trail Blazers");
+      assert.equal(parsed?.home.logo, "https://a.espncdn.com/i/teamlogos/nba/500/scoreboard/utah.png");
+      assert.equal(parsed?.venue, "Delta Center");
+
+      // Reject games within 10 minutes or past
+      const pastKickoff = new Date(fixedNow + 5 * 60 * 1000).toISOString(); // only +5 min
+      const pastEvent = { ...mockEvent, date: pastKickoff };
+      assert.equal(parseEspnEvent(pastEvent, "nba", "nba", "NBA", fixedNow), null);
+
+      // Reject non-pre status (in-progress or final)
+      const inProgressEvent = { ...mockEvent, status: { type: { state: "in" } } };
+      assert.equal(parseEspnEvent(inProgressEvent, "nba", "nba", "NBA", fixedNow), null);
+
+      // Reject malformed or missing competitors without crashing
+      assert.equal(parseEspnEvent({}, "nba", "nba", "NBA", fixedNow), null);
+      assert.equal(parseEspnEvent({ id: "123" }, "nba", "nba", "NBA", fixedNow), null);
+    });
+
+    await it("GET /api/fixtures validates query parameters strictly", async () => {
+      // Invalid sport
+      const res1 = await getFixturesRoute(new Request("http://localhost:3000/api/fixtures?sport=baseball"));
+      assert.equal(res1.status, 400);
+
+      // Invalid league for sport
+      const res2 = await getFixturesRoute(new Request("http://localhost:3000/api/fixtures?sport=nba&league=eng.1"));
+      assert.equal(res2.status, 400);
+
+      // Invalid days
+      const res3 = await getFixturesRoute(new Request("http://localhost:3000/api/fixtures?sport=soccer&league=eng.1&days=99"));
+      assert.equal(res3.status, 400);
+    });
+
+    await it("settleMarket evaluates moneyline and total correctly", () => {
+      // Soccer Moneyline: Home Win
+      assert.equal(settleMarket({ type: "moneyline", selection: "home" }, { home: 2, away: 1 }), "ACCURATE");
+      assert.equal(settleMarket({ type: "moneyline", selection: "away" }, { home: 2, away: 1 }), "FAILED");
+      assert.equal(settleMarket({ type: "moneyline", selection: "draw" }, { home: 2, away: 1 }), "FAILED");
+
+      // Soccer Moneyline: Draw
+      assert.equal(settleMarket({ type: "moneyline", selection: "draw" }, { home: 1, away: 1 }), "ACCURATE");
+      assert.equal(settleMarket({ type: "moneyline", selection: "home" }, { home: 1, away: 1 }), "FAILED");
+
+      // Total Over/Under with valid half-line
+      assert.equal(settleMarket({ type: "total", selection: "over", line: 2.5 }, { home: 2, away: 1 }), "ACCURATE"); // 3 > 2.5
+      assert.equal(settleMarket({ type: "total", selection: "under", line: 2.5 }, { home: 2, away: 1 }), "FAILED");
+      assert.equal(settleMarket({ type: "total", selection: "under", line: 3.5 }, { home: 2, away: 1 }), "ACCURATE");
+
+      // Strict rejection of integer line (disallowed to prevent push)
+      assert.equal(settleMarket({ type: "total", selection: "over", line: 3.0 }, { home: 2, away: 1 }), "manual_required");
+    });
+
+    await it("memory codec preserves and round-trips structured fixture and market", () => {
+      const sportsPayload = {
+        version: "1.0",
+        type: "prediction",
+        predictionId: "rec-sports-01",
+        analyst: "@OptaTactics",
+        category: "soccer",
+        title: "Arsenal vs Chelsea (Premier League): Arsenal to Win",
+        target: "Arsenal vs Chelsea",
+        pick: "Arsenal to Win",
+        outcome: "PENDING",
+        delta: 0,
+        resolvedAt: "2026-11-03T20:00:00.000Z",
+        fixture: {
+          provider: "espn",
+          eventId: "700123",
+          sport: "soccer",
+          league: "eng.1",
+          leagueLabel: "Premier League",
+          kickoff: "2026-11-03T20:00:00.000Z",
+          home: { id: "1", name: "Arsenal", abbr: "ARS", logo: "https://a.espncdn.com/ars.png" },
+          away: { id: "2", name: "Chelsea", abbr: "CHE", logo: "https://a.espncdn.com/che.png" },
+        },
+        market: {
+          type: "moneyline",
+          selection: "home",
+        },
+      };
+
+      const encoded = encodeMemory(sportsPayload);
+      const decoded = decodeMemory(encoded);
+      assert.notEqual(decoded, null);
+      assert.equal(decoded?.fixture?.eventId, "700123");
+      assert.equal(decoded?.fixture?.home.name, "Arsenal");
+      assert.equal(decoded?.market?.selection, "home");
+
+      const record = payloadToPredictionRecord(decoded, "blob-sports-01");
+      assert.equal(record.fixture?.eventId, "700123");
+      assert.equal(record.market?.type, "moneyline");
+
+      // Deduplication retains fixture and market when merging pending with resolved
+      const resolvedClone = { ...record, outcome: "ACCURATE", credibilityDelta: 7, pnl: 227 };
+      delete resolvedClone.fixture; // Suppose resolved receipt omits fixture
+      const merged = dedupePredictions([record, resolvedClone]);
+      assert.equal(merged.length, 1);
+      assert.equal(merged[0].outcome, "ACCURATE");
+      assert.equal(merged[0].fixture?.eventId, "700123"); // Preserved from pending!
+    });
+
+    await it("POST /api/memories accepts structured sports forecasts and creates server-curated target/pick", async () => {
+      // Mock getVerifiedFixtureById for offline testing
+      const futureKickoff = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("site.api.espn.com")) {
+          return {
+            ok: true,
+            json: async () => ({
+              events: [
+                {
+                  id: "mock_event_999",
+                  date: futureKickoff,
+                  status: { type: { state: "pre" } },
+                  competitions: [
+                    {
+                      competitors: [
+                        { homeAway: "home", team: { id: "1", displayName: "Arsenal", shortDisplayName: "Arsenal", abbreviation: "ARS" } },
+                        { homeAway: "away", team: { id: "2", displayName: "Liverpool", shortDisplayName: "Liverpool", abbreviation: "LIV" } },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            }),
+          };
+        }
+        return originalFetch(url);
+      };
+
+      const validSportsBody = {
+        analyst: "@StatmanDaveFC",
+        sportType: "soccer",
+        stake: 300,
+        confidence: 4,
+        odds: "-110",
+        target: "Client Injected Fake Target", // Should be overwritten by server
+        pick: "Client Injected Fake Pick",     // Should be overwritten by server
+        fixture: {
+          provider: "espn",
+          eventId: "mock_event_999",
+          sport: "soccer",
+          league: "eng.1",
+          leagueLabel: "Premier League",
+          kickoff: futureKickoff,
+          home: { id: "1", name: "Arsenal" },
+          away: { id: "2", name: "Liverpool" },
+        },
+        market: {
+          type: "moneyline",
+          selection: "home",
+        },
+      };
+
+      const req = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validSportsBody),
+      });
+
+      const res = await postMemory(req);
+      const json = await res.json();
+      assert.equal(res.status, 200);
+      assert.equal(json.success, true);
+      assert.equal(json.data.target, "Arsenal vs Liverpool"); // Server overwritten!
+      assert.equal(json.data.pick, "Arsenal to Win"); // Server overwritten!
+      assert.equal(json.data.fixture?.eventId, "mock_event_999");
+
+      globalThis.fetch = originalFetch;
+    });
+
+    await it("POST /api/memories rejects total line that is not a half-number (x.5)", async () => {
+      const originalFetch = globalThis.fetch;
+      const futureKickoff = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("site.api.espn.com")) {
+          return {
+            ok: true,
+            json: async () => ({
+              events: [
+                {
+                  id: "mock_event_999",
+                  date: futureKickoff,
+                  status: { type: { state: "pre" } },
+                  competitions: [
+                    {
+                      competitors: [
+                        { homeAway: "home", team: { id: "1", displayName: "Arsenal" } },
+                        { homeAway: "away", team: { id: "2", displayName: "Liverpool" } },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            }),
+          };
+        }
+        return originalFetch(url);
+      };
+
+      const badLineBody = {
+        analyst: "@StatmanDaveFC",
+        sportType: "soccer",
+        stake: 300,
+        confidence: 4,
+        target: "Arsenal vs Liverpool",
+        pick: "Over 3 Goals",
+        fixture: {
+          provider: "espn",
+          eventId: "mock_event_999",
+          sport: "soccer",
+          league: "eng.1",
+          kickoff: futureKickoff,
+          home: { id: "1", name: "Arsenal" },
+          away: { id: "2", name: "Liverpool" },
+        },
+        market: {
+          type: "total",
+          selection: "over",
+          line: 3.0, // Integer line rejected!
+        },
+      };
+
+      const req = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(badLineBody),
+      });
+
+      const res = await postMemory(req);
+      const json = await res.json();
+      assert.equal(res.status, 400);
+      assert.equal(json.success, false);
+      assert.ok(json.error?.includes("half-number"));
+
+      globalThis.fetch = originalFetch;
+    });
+
+    await it("resolveDuePredictions: ENABLE_SPORTS_AUTORESOLVE=false keeps sports in manual_required", async () => {
+      process.env.ENABLE_SPORTS_AUTORESOLVE = "false";
+
+      const candidateSports = [
+        {
+          id: "rec-sports-manual-test",
+          category: "prediction",
+          sportType: "soccer",
+          title: "Arsenal vs Liverpool",
+          target: "Arsenal vs Liverpool",
+          pick: "Arsenal to Win",
+          analyst: "@Sharps",
+          odds: "-110",
+          stake: 250,
+          pnl: 0,
+          outcome: "PENDING",
+          credibilityDelta: 0,
+          confidence: 4,
+          timestamp: Date.now() - 3600000,
+          dateStr: "Nov 1",
+          writeStatus: "confirmed",
+          deadline: new Date(Date.now() - 3600000).toISOString(),
+          fixture: {
+            provider: "espn",
+            eventId: "7001",
+            sport: "soccer",
+            league: "eng.1",
+            leagueLabel: "Premier League",
+            kickoff: new Date(Date.now() - 3600000).toISOString(),
+            home: { id: "1", name: "Arsenal" },
+            away: { id: "2", name: "Liverpool" },
+          },
+          market: {
+            type: "moneyline",
+            selection: "home",
+          },
+        },
+      ];
+
+      const res = await resolveDuePredictions(candidateSports);
+      assert.equal(res.resolvedCount, 0);
+      assert.equal(res.results[0].status, "manual_required");
+      assert.ok(res.results[0].reason?.includes("manual") || res.results[0].reason?.includes("Sports fixtures"));
+    });
+
+    await it("resolveDuePredictions: ENABLE_SPORTS_AUTORESOLVE=true resolves completed match via ESPN", async () => {
+      process.env.ENABLE_SPORTS_AUTORESOLVE = "true";
+
+      const kickoffPast = new Date(Date.now() - 7200000).toISOString(); // 2 hours ago
+      const originalFetch = globalThis.fetch;
+
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("site.api.espn.com")) {
+          return {
+            ok: true,
+            json: async () => ({
+              events: [
+                {
+                  id: "7002",
+                  status: {
+                    type: {
+                      state: "post",
+                      completed: true,
+                      name: "STATUS_FINAL",
+                      description: "Final",
+                    },
+                  },
+                  competitions: [
+                    {
+                      competitors: [
+                        { homeAway: "home", score: "3" }, // Arsenal 3
+                        { homeAway: "away", score: "1" }, // Liverpool 1
+                      ],
+                    },
+                  ],
+                },
+              ],
+            }),
+          };
+        }
+        return originalFetch(url);
+      };
+
+      const candidateSports = [
+        {
+          id: "rec-sports-autoresolve-live-01",
+          category: "prediction",
+          sportType: "soccer",
+          title: "Arsenal vs Liverpool",
+          target: "Arsenal vs Liverpool",
+          pick: "Arsenal to Win",
+          analyst: "@Sharps",
+          odds: "-110",
+          stake: 250,
+          pnl: 0,
+          outcome: "PENDING",
+          credibilityDelta: 0,
+          confidence: 4,
+          timestamp: Date.now() - 7200000,
+          dateStr: "Nov 1",
+          writeStatus: "confirmed",
+          deadline: kickoffPast,
+          fixture: {
+            provider: "espn",
+            eventId: "7002",
+            sport: "soccer",
+            league: "eng.1",
+            leagueLabel: "Premier League",
+            kickoff: kickoffPast,
+            home: { id: "1", name: "Arsenal" },
+            away: { id: "2", name: "Liverpool" },
+          },
+          market: {
+            type: "moneyline",
+            selection: "home",
+          },
+        },
+      ];
+
+      const res = await resolveDuePredictions(candidateSports);
+      assert.equal(res.resolvedCount, 1);
+      assert.equal(res.results[0].status, "resolved");
+      assert.equal(res.results[0].outcome, "ACCURATE"); // Home won 3-1!
+      assert.equal(res.results[0].evidence?.source, "espn-scoreboard (unofficial)");
+      assert.ok(!res.results[0].evidence?.details?.includes("Tatum")); // Non-Tatum honest attribution
+
+      process.env.ENABLE_SPORTS_AUTORESOLVE = "false";
+      globalThis.fetch = originalFetch;
     });
   });
 

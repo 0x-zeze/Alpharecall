@@ -192,6 +192,8 @@ export async function saveMemory(record: SaveMemoryInput): Promise<MemoryRecord>
     suiCheckpoint: record.suiCheckpoint,
     suiCheckpointDigest: record.suiCheckpointDigest,
     suiCheckpointSource: record.suiCheckpointSource,
+    fixture: record.fixture,
+    market: record.market,
     blobId: undefined,
     writeStatus: "pending",
     source: "demo",

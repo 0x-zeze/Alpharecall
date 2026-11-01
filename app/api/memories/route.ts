@@ -169,23 +169,26 @@ export async function POST(req: Request) {
     }
 
     // 3. Strict String & Field Validations
-    if (!title || typeof title !== "string" || title.trim().length === 0 || title.length > 120) {
-      return NextResponse.json(
-        { success: false, error: "Title is required and must be between 1 and 120 characters." },
-        { status: 400 }
-      );
-    }
-    if (!target || typeof target !== "string" || target.trim().length === 0 || target.length > 120) {
-      return NextResponse.json(
-        { success: false, error: "Target is required and must be between 1 and 120 characters." },
-        { status: 400 }
-      );
-    }
-    if (!pick || typeof pick !== "string" || pick.trim().length === 0 || pick.length > 100) {
-      return NextResponse.json(
-        { success: false, error: "Pick is required and must be between 1 and 100 characters." },
-        { status: 400 }
-      );
+    const isStructuredSports = fixture && typeof fixture === "object";
+    if (!isStructuredSports) {
+      if (!title || typeof title !== "string" || title.trim().length === 0 || title.length > 120) {
+        return NextResponse.json(
+          { success: false, error: "Title is required and must be between 1 and 120 characters." },
+          { status: 400 }
+        );
+      }
+      if (!target || typeof target !== "string" || target.trim().length === 0 || target.length > 120) {
+        return NextResponse.json(
+          { success: false, error: "Target is required and must be between 1 and 120 characters." },
+          { status: 400 }
+        );
+      }
+      if (!pick || typeof pick !== "string" || pick.trim().length === 0 || pick.length > 100) {
+        return NextResponse.json(
+          { success: false, error: "Pick is required and must be between 1 and 100 characters." },
+          { status: 400 }
+        );
+      }
     }
 
     // 4. Validate Analyst Pattern: @[A-Za-z0-9_]{3,30}
