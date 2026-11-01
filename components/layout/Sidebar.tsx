@@ -66,17 +66,9 @@ export function Sidebar({
     { id: "bankroll", label: "Bankroll", icon: Wallet },
   ];
 
-  // Resolve metrics from either split or legacy props
-  const resolvedTatum = tatumStatus || (suiMetrics ? {
-    ok: suiMetrics.isTatumGateway,
-    status: suiMetrics.isTatumGateway ? "live" : "unavailable",
-    plan: "Free",
-    creditLimit: 100000,
-    latencyMs: suiMetrics.latencyMs,
-    version: null,
-  } as TatumGatewayStatus : null);
-
-  const resolvedSui = suiChainStatus || suiMetrics;
+  // Resolve metrics from separate props without cross-coupling
+  const resolvedTatum = tatumStatus ?? null;
+  const resolvedSui = suiChainStatus || suiMetrics || null;
 
   return (
     <>
@@ -169,19 +161,21 @@ export function Sidebar({
                 );
               })}
             </nav>
-            <div className="mt-4 space-y-1 text-[11px] font-mono-num text-[var(--muted)] border-t border-[var(--border)] pt-3">
+            <div className="mt-4 space-y-1.5 text-[11px] font-mono-num text-[var(--muted)] border-t border-[var(--border)] pt-3">
               <div className="flex justify-between gap-3">
-                <span>Tatum</span>
-                <span>{tatumStatus?.status === "live" ? "live" : tatumStatus ? "unavailable" : "—"}</span>
+                <span>Tatum Data API</span>
+                <span className={resolvedTatum?.status === "live" ? "text-[var(--win)] font-semibold" : "text-[var(--muted)]"}>
+                  {resolvedTatum?.status === "live" ? "live" : "offline"}
+                </span>
               </div>
               <div className="flex justify-between gap-3">
                 <span>Sui checkpoint</span>
-                <span>
-                  {suiChainStatus?.status === "live" && suiChainStatus.checkpoint
-                    ? `#${suiChainStatus.checkpoint.slice(-8)}`
-                    : suiChainStatus
-                    ? "unavailable"
-                    : "—"}
+                <span className={resolvedSui?.status === "live" && resolvedSui.checkpoint ? "text-[var(--accent)] font-semibold truncate max-w-[180px]" : "text-[var(--muted)]"}>
+                  {resolvedSui?.status === "live" && resolvedSui.checkpoint
+                    ? `#${resolvedSui.checkpoint.slice(-8)} via ${
+                        resolvedSui.source === "tatum-gateway" ? "gateway Tatum" : "Sui GraphQL"
+                      }`
+                    : "unavailable"}
                 </span>
               </div>
             </div>
@@ -245,7 +239,7 @@ export function Sidebar({
 
         {/* Telemetry & State Boxes */}
         <div className="pt-3 border-t border-[var(--border)] space-y-2.5">
-          {/* Box 1: Tatum Data Gateway Telemetry */}
+          {/* Box 1: Tatum Data API Telemetry */}
           <div className="p-2.5 rounded-[10px] bg-[var(--card)] border border-[var(--border)] text-[11px] font-mono-num space-y-1">
             <div className="flex items-center justify-between text-[var(--muted)]">
               <span className="flex items-center gap-1.5">
@@ -255,11 +249,11 @@ export function Sidebar({
                   }`}
                 />
                 <Server className="w-3 h-3" />
-                Tatum Data Gateway
+                Tatum Data API
               </span>
-              <span>
-                {resolvedTatum?.status === "live" && resolvedTatum.latencyMs !== null
-                  ? `${resolvedTatum.latencyMs}ms`
+              <span className={resolvedTatum?.status === "live" ? "text-[var(--win)] font-semibold" : "text-[var(--muted)]"}>
+                {resolvedTatum?.status === "live"
+                  ? `${resolvedTatum.latencyMs !== null ? `${resolvedTatum.latencyMs}ms · ` : ""}live`
                   : "offline"}
               </span>
             </div>
@@ -271,7 +265,7 @@ export function Sidebar({
             </div>
           </div>
 
-          {/* Box 2: Sui RPC Gateway Telemetry */}
+          {/* Box 2: Sui Checkpoint Telemetry */}
           <div className="p-2.5 rounded-[10px] bg-[var(--card)] border border-[var(--border)] text-[11px] font-mono-num space-y-1">
             <div className="flex items-center justify-between text-[var(--muted)]">
               <span className="flex items-center gap-1.5">
@@ -281,18 +275,20 @@ export function Sidebar({
                   }`}
                 />
                 <Network className="w-3 h-3" />
-                Sui RPC Node
+                Sui Checkpoint
               </span>
               <span className="text-[10px]">
-                {resolvedSui?.status === "live" ? "Connected" : "unavailable"}
+                {resolvedSui?.status === "live" ? "live" : "unavailable"}
               </span>
             </div>
             <div className="flex items-center justify-between font-medium text-[var(--text)] text-[10px]">
               <span className="text-[var(--muted)]">Checkpoint</span>
-              <span>
+              <span className={`text-[10px] truncate max-w-[140px] ${resolvedSui?.status === "live" && resolvedSui.checkpoint ? "font-semibold text-[var(--accent)]" : ""}`}>
                 {resolvedSui?.status === "live" && resolvedSui.checkpoint
-                  ? `#${resolvedSui.checkpoint.slice(-8)}`
-                  : "—"}
+                  ? `#${resolvedSui.checkpoint.slice(-8)} via ${
+                      resolvedSui.source === "tatum-gateway" ? "gateway Tatum" : "Sui GraphQL"
+                    }`
+                  : "unavailable"}
               </span>
             </div>
             <div className="flex items-center justify-between text-[var(--muted)] text-[10px]">
