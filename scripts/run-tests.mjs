@@ -518,6 +518,15 @@ async function main() {
       assert.equal(calculateOutcomeDelta("FAILED", 3), -5);
     });
 
+    await it("should parse leading-zero comma numbers as decimals instead of thousands", () => {
+      assert.equal(normalizePriceString("0,925"), 0.925);
+      assert.equal(normalizePriceString("$0,925"), 0.925);
+      assert.equal(normalizePriceString("0,0925"), 0.0925);
+      assert.equal(normalizePriceString("0,89"), 0.89);
+      assert.equal(normalizePriceString("1,234"), 1234);
+      assert.equal(normalizePriceString("77,890"), 77890);
+    });
+
     await it("should parse comma decimal numbers and thousands separators correctly", () => {
       // Testing ambiguous cases per requirement
       assert.equal(normalizePriceString("1,234"), 1234);

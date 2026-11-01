@@ -118,7 +118,9 @@ export function normalizePriceString(raw: string): number | null {
       token = token.replace(/\./g, "").replace(",", ".");
     }
   } else if (hasComma) {
-    const thousandsPattern = /^\d{1,3}(,\d{3})+$/;
+    // "0,925" adalah desimal 0.925, sedangkan "1,234" dan "77,890" adalah pemisah ribuan.
+    // Grup ribuan tidak pernah diawali angka 0.
+    const thousandsPattern = /^[1-9]\d{0,2}(,\d{3})+$/;
     if (thousandsPattern.test(token)) {
       token = token.replace(/,/g, "");
     } else {
