@@ -4,9 +4,6 @@ import { getLatestSuiCheckpointAnchor } from "@/lib/tatum";
 import { MAX_PREDICTION_HORIZON_MS } from "@/lib/resolver";
 import type { PredictionCategory } from "@/lib/types";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 // In-memory rate limiting (best-effort across serverless instances)
 interface RateLimitBucket {
   count: number;
