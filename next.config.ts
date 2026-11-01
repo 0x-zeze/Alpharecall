@@ -6,7 +6,12 @@ const nextConfig: NextConfig = {
     "@mysten-incubation/memwal",
     "@mysten/seal",
     "@mysten/sui",
+    "@grpc/grpc-js",
+    "@grpc/proto-loader",
   ],
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./proto/**/*"],
+  },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
