@@ -41,7 +41,7 @@ export function WinRateRingCard({
               cx="60"
               cy="60"
               r={radius}
-              stroke="var(--border)"
+              stroke="var(--glass-surface-3)"
               strokeWidth="9"
               fill="transparent"
             />
@@ -50,14 +50,21 @@ export function WinRateRingCard({
               cx="60"
               cy="60"
               r={radius}
-              stroke="var(--win)"
+              stroke="url(#winGradient)"
               strokeWidth="9"
               fill="transparent"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
               className="transition-all duration-1000 ease-out"
+              style={{ filter: "drop-shadow(0 0 6px var(--win))" }}
             />
+            <defs>
+              <linearGradient id="winGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="var(--win)" />
+                <stop offset="100%" stopColor="var(--accent)" />
+              </linearGradient>
+            </defs>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className="text-2xl font-bold font-mono-num text-[var(--text)]">

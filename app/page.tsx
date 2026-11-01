@@ -200,10 +200,10 @@ export default function Home() {
   return (
     <ThemeProvider>
       <div className="flex flex-col md:flex-row min-h-screen bg-[var(--bg)] text-[var(--text)]">
-        {/* Toast Notification */}
+        {/* Toast Notification — Liquid Glass */}
         {toastMessage && (
-          <div className="fixed top-5 right-5 z-50 flex items-center gap-2.5 bg-[var(--card)] border border-[var(--accent)]/40 text-[var(--accent)] px-4 py-2.5 rounded-xl shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-3 text-xs font-mono-num font-semibold">
-            <Sparkles className="w-4 h-4 shrink-0" />
+          <div className="fixed top-5 right-5 z-50 flex items-center gap-2.5 bg-[var(--card)] backdrop-blur-2xl border border-[var(--accent-violet)]/30 text-[var(--accent)] px-4 py-3 rounded-2xl shadow-[0_8px_32px_-4px_rgba(139,124,255,0.25)] animate-in fade-in slide-in-from-top-3 text-xs font-mono-num font-semibold">
+            <Sparkles className="w-4 h-4 shrink-0 text-[var(--accent-violet)]" />
             <span>{toastMessage}</span>
           </div>
         )}

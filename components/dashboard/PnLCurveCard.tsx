@@ -64,14 +64,14 @@ export function PnLCurveCard({ currentPnl, totalPnlPercent }: PnLCurveCardProps)
           title="Cumulative PnL Performance"
           subtitle="Simulated PnL from resolved backtest and live picks"
           action={
-            <div className="flex items-center gap-1 bg-[var(--border-subtle)] p-1 rounded-[8px] border border-[var(--border)]">
+            <div className="flex items-center gap-1 bg-[var(--glass-surface-1)] p-1 rounded-xl border border-[var(--border)]">
               {(["7D", "30D", "90D", "All"] as const).map((tf) => (
                 <button
                   key={tf}
                   onClick={() => setTimeframe(tf)}
-                  className={`px-2.5 py-1 rounded-[6px] text-[11px] font-mono-num font-medium transition ${
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono-num font-medium transition-all duration-250 ${
                     timeframe === tf
-                      ? "bg-[var(--card)] text-[var(--accent)] border border-[var(--border)] shadow-xs"
+                      ? "bg-[var(--accent-violet)]/12 text-[var(--accent-violet)] border border-[var(--accent-violet)]/20 shadow-sm"
                       : "text-[var(--muted)] hover:text-[var(--text)]"
                   }`}
                 >
@@ -86,7 +86,7 @@ export function PnLCurveCard({ currentPnl, totalPnlPercent }: PnLCurveCardProps)
           <span className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text)] font-mono-num">
             <AnimatedNumber value={Math.abs(currentPnl)} prefix={currentPnl >= 0 ? "+$" : "-$"} />
           </span>
-          <span className="text-xs font-mono-num px-2 py-0.5 rounded-full bg-[var(--win-bg)] text-[var(--win)] border border-[var(--win)]/20 font-semibold">
+          <span className="text-xs font-mono-num px-2.5 py-1 rounded-full bg-[var(--win-bg)] text-[var(--win)] border border-[var(--win)]/20 font-semibold shadow-[0_0_12px_-2px_var(--win)]">
             {totalPnlPercent >= 0 ? "+" : ""}{totalPnlPercent}% of resolved stake
           </span>
         </div>
@@ -121,7 +121,7 @@ export function PnLCurveCard({ currentPnl, totalPnlPercent }: PnLCurveCardProps)
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="p-2.5 rounded-[10px] bg-[var(--card)] border border-[var(--border)] shadow-xl text-xs font-mono-num space-y-1">
+                    <div className="p-2.5 rounded-xl bg-[var(--card-solid)] backdrop-blur-xl border border-[var(--border)] shadow-[0_8px_24px_-4px_rgba(0,0,0,0.4)] text-xs font-mono-num space-y-1">
                       <p className="text-[var(--muted)]">{payload[0].payload.date}</p>
                       <p className="text-sm font-bold text-[var(--accent)]">
                         +${payload[0].value?.toLocaleString()}

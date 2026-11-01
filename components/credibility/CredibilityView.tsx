@@ -61,14 +61,14 @@ export function CredibilityView({
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bento-card p-4 sm:p-6 flex flex-col gap-4">
+      <div className="liquid-glass p-4 sm:p-6 flex flex-col gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <Award className="w-5 h-5 text-[var(--accent)] shrink-0" />
-            <h2 className="text-base sm:text-lg font-bold text-[var(--text)] leading-tight">
+            <Award className="w-5 h-5 text-[var(--accent-violet)] shrink-0" />
+            <h2 className="text-base sm:text-lg font-heading font-bold text-[var(--text)] leading-tight">
               Forecaster Credibility Matrix
             </h2>
-            <span className="text-[10px] font-mono-num px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 font-semibold">
+            <span className="text-[10px] font-mono-num px-2 py-0.5 rounded-full bg-[var(--accent-violet)]/10 text-[var(--accent-violet)] border border-[var(--accent-violet)]/20 font-semibold shadow-[0_0_8px_-2px_var(--accent-violet)]">
               Walrus Consensus Engine
             </span>
           </div>
@@ -81,10 +81,10 @@ export function CredibilityView({
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 bg-[var(--border-subtle)] px-4 py-2.5 rounded-[10px] border border-[var(--border)] text-xs font-mono-num w-full">
+        <div className="flex items-center justify-between gap-3 bg-[var(--glass-surface-1)] px-4 py-2.5 rounded-xl border border-[var(--border)] text-xs font-mono-num w-full backdrop-blur-sm">
           <div>
             <span className="text-[10px] text-[var(--muted)] uppercase block">Weight Range</span>
-            <span className="font-bold text-[var(--accent)]">0.40x — 2.40x</span>
+            <span className="font-bold text-[var(--accent-violet)]">0.40x — 2.40x</span>
           </div>
           <div className="h-6 w-px bg-[var(--border)]" />
           <div>
