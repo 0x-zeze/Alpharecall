@@ -76,7 +76,7 @@ export function CredibilityView({
             Credibility weights are dynamically calculated from immutable audit records recalled from Walrus Memory.
             Formula: <span className="font-mono-num font-semibold text-[var(--text)] break-all">Weight = max(0.40, min(2.40, 1.0 + delta / 20))</span>.
             <span className="block mt-1 text-[11px] text-[var(--muted)]/80">
-              Note: Baseline scores originate from audited October 2024 backtest seeds, while live forecasts dynamically adjust analyst multipliers in real-time.
+              Note: Baseline scores originate from historical October 2024 backtest seeds, while live forecasts dynamically adjust analyst multipliers in real-time.
             </span>
           </p>
         </div>

@@ -243,14 +243,22 @@ export async function POST(req: Request) {
       asset: typeof asset === "string" ? asset.trim().slice(0, 20) : undefined,
       suiCheckpoint: anchor.checkpoint,
       suiCheckpointDigest: anchor.digest,
+      suiCheckpointSource: anchor.source,
     });
+
+    const sourceLabel =
+      anchor.source === "tatum-gateway"
+        ? " via Tatum gateway"
+        : anchor.source === "sui-graphql"
+        ? " via Sui GraphQL"
+        : "";
 
     return NextResponse.json({
       success: true,
       data: saved,
       status: saved.writeStatus,
       blobId: saved.blobId,
-      suiAnchor: anchor.checkpoint ? `#${anchor.checkpoint}` : "not anchored",
+      suiAnchor: anchor.checkpoint ? `#${anchor.checkpoint}${sourceLabel}` : "not anchored",
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);

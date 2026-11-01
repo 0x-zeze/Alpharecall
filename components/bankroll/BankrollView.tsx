@@ -123,8 +123,8 @@ export function BankrollView() {
         {/* Stake Sizing Helper (Kelly / Flat %) */}
         <BentoCard colSpan="col-span-12 lg:col-span-5" delay={0.1}>
           <BentoHeader
-            title="Institutional Stake Sizing"
-            subtitle="Dynamic Kelly Criterion & Flat Risk calculation"
+            title="Simulated Stake Sizing Calculator"
+            subtitle="Simulated Kelly Criterion & Flat Risk calculation"
             action={<Calculator className="w-4 h-4 text-[var(--accent)]" />}
           />
 
@@ -140,7 +140,7 @@ export function BankrollView() {
                     : "text-[var(--muted)]"
                 }`}
               >
-                Quarter-Kelly
+                Quarter-Kelly (Simulated)
               </button>
               <button
                 type="button"
@@ -151,7 +151,7 @@ export function BankrollView() {
                     : "text-[var(--muted)]"
                 }`}
               >
-                Flat 2.5%
+                Flat 2.5% (Simulated)
               </button>
             </div>
 
@@ -184,18 +184,18 @@ export function BankrollView() {
 
             {/* Recommended Output Box */}
             <div className="p-4 rounded-[10px] bg-[var(--accent)]/10 border border-[var(--accent)]/30 space-y-1">
-              <span className="text-[10px] text-[var(--muted)] uppercase block">Optimal Recommendation</span>
+              <span className="text-[10px] text-[var(--muted)] uppercase block">Optimal Recommendation (Simulated)</span>
               <div className="flex items-baseline justify-between">
                 <span className="text-2xl font-bold text-[var(--accent)]">
                   ${Math.round(recommendedStake).toLocaleString()}
                 </span>
                 <span className="text-xs font-semibold text-[var(--text)]">
-                  {stakeMethod === "kelly" ? `${quarterKellyPercent.toFixed(1)}% of Bankroll` : "2.5% of Bankroll"}
+                  {stakeMethod === "kelly" ? `${quarterKellyPercent.toFixed(1)}% of Simulated Bankroll` : "2.5% of Simulated Bankroll"}
                 </span>
               </div>
               <p className="text-[10px] text-[var(--muted)] pt-1">
                 {stakeMethod === "kelly"
-                  ? "Mathematically balances expected value against drawdown variance."
+                  ? "Mathematically balances simulated expected value against drawdown variance."
                   : "Conservative fixed allocation ideal for high-variance streak mitigation."}
               </p>
             </div>

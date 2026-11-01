@@ -82,6 +82,7 @@ export default function Home() {
             asset: m.asset,
             suiCheckpoint: m.suiCheckpoint,
             suiCheckpointDigest: m.suiCheckpointDigest,
+            suiCheckpointSource: m.suiCheckpointSource,
             oracleFallbackUsed: m.oracleFallbackUsed,
           }));
 

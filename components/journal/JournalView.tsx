@@ -214,7 +214,15 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                       </p>
                     )}
                     <p className="text-[var(--muted)]">
-                      {pred.suiCheckpoint ? `Sui #${pred.suiCheckpoint.slice(-8)}` : "not anchored"}
+                      {pred.suiCheckpoint
+                        ? `Sui #${pred.suiCheckpoint.slice(-8)}${
+                            pred.suiCheckpointSource === "tatum-gateway"
+                              ? " via Tatum gateway"
+                              : pred.suiCheckpointSource === "sui-graphql"
+                              ? " via Sui GraphQL"
+                              : ""
+                          }`
+                        : "not anchored"}
                       {pred.writeStatus === "confirmed" && pred.blobId ? " · Walrus confirmed" : ""}
                     </p>
                   </div>
@@ -459,6 +467,11 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                                     {pred.suiCheckpoint ? (
                                       <span className="font-mono-num text-[10px] text-[var(--accent)] font-semibold">
                                         #{pred.suiCheckpoint.slice(-8)}
+                                        {pred.suiCheckpointSource === "tatum-gateway" ? (
+                                          <span className="text-[var(--muted)] font-normal ml-1">via Tatum gateway</span>
+                                        ) : pred.suiCheckpointSource === "sui-graphql" ? (
+                                          <span className="text-[var(--muted)] font-normal ml-1">via Sui GraphQL</span>
+                                        ) : null}
                                       </span>
                                     ) : (
                                       <span className="text-[10px] text-[var(--muted)] italic">not anchored</span>
