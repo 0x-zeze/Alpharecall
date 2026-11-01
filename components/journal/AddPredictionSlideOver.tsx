@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Zap, Shield, Sparkles, AlertCircle } from "lucide-react";
+import { X, Sparkles, AlertCircle, Shield, Zap } from "lucide-react";
+import { CoinLogo } from "@/components/ui/CoinLogo";
 import { PredictionCategory } from "@/lib/types";
 
 interface AddPredictionSlideOverProps {
@@ -226,43 +227,71 @@ export function AddPredictionSlideOver({
                     <span className="text-[10px] text-[var(--muted)]">Tatum Data Oracle</span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-3">
                     <div>
-                      <label className="block text-[var(--muted)] mb-1 uppercase text-[9px]">Asset</label>
-                      <select
-                        value={asset}
-                        onChange={(e) => setAsset(e.target.value)}
-                        className="w-full px-2 py-1.5 rounded-[6px] bg-[var(--card)] border border-[var(--border)] text-[var(--text)]"
+                      <label id="crypto-asset-label" className="block text-[var(--muted)] mb-1.5 uppercase text-[9px] font-semibold">
+                        Select Asset
+                      </label>
+                      <div
+                        role="radiogroup"
+                        aria-labelledby="crypto-asset-label"
+                        className="grid grid-cols-3 gap-2"
                       >
-                        <option value="SUI">SUI</option>
-                        <option value="BTC">BTC</option>
-                        <option value="ETH">ETH</option>
-                      </select>
+                        {[
+                          { id: "SUI", name: "Sui" },
+                          { id: "BTC", name: "Bitcoin" },
+                          { id: "ETH", name: "Ethereum" },
+                        ].map((coin) => {
+                          const isSelected = asset === coin.id;
+                          return (
+                            <button
+                              key={coin.id}
+                              type="button"
+                              role="radio"
+                              aria-checked={isSelected}
+                              onClick={() => setAsset(coin.id)}
+                              className={`flex items-center gap-2 p-2 rounded-[8px] border text-left transition min-h-[44px] cursor-pointer ${
+                                isSelected
+                                  ? "bg-[var(--accent)]/15 border-[var(--accent)] text-[var(--text)]"
+                                  : "bg-[var(--card)] border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
+                              }`}
+                            >
+                              <CoinLogo symbol={coin.id} size={22} />
+                              <div className="flex flex-col leading-tight">
+                                <span className="font-semibold text-xs text-[var(--text)]">{coin.id}</span>
+                                <span className="text-[10px] text-[var(--muted)]">{coin.name}</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-[var(--muted)] mb-1 uppercase text-[9px]">Direction</label>
-                      <select
-                        value={direction}
-                        onChange={(e) => setDirection(e.target.value as "above" | "below")}
-                        className="w-full px-2 py-1.5 rounded-[6px] bg-[var(--card)] border border-[var(--border)] text-[var(--text)]"
-                      >
-                        <option value="above">Above (&gt;=)</option>
-                        <option value="below">Below (&lt;=)</option>
-                      </select>
-                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[var(--muted)] mb-1 uppercase text-[9px]">Direction</label>
+                        <select
+                          value={direction}
+                          onChange={(e) => setDirection(e.target.value as "above" | "below")}
+                          className="w-full px-2 py-2 rounded-[6px] bg-[var(--card)] border border-[var(--border)] text-[var(--text)] min-h-[44px]"
+                        >
+                          <option value="above">Above (&gt;=)</option>
+                          <option value="below">Below (&lt;=)</option>
+                        </select>
+                      </div>
 
-                    <div>
-                      <label className="block text-[var(--muted)] mb-1 uppercase text-[9px]">Target Price ($)</label>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        required
-                        placeholder="e.g. 1.85 or 0,9"
-                        value={targetPriceInput}
-                        onChange={(e) => setTargetPriceInput(e.target.value)}
-                        className="w-full px-2 py-1.5 rounded-[6px] bg-[var(--card)] border border-[var(--border)] text-[var(--text)] text-xs font-mono-num"
-                      />
+                      <div>
+                        <label className="block text-[var(--muted)] mb-1 uppercase text-[9px]">Target Price ($)</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          required
+                          placeholder="e.g. 1.85 or 0,9"
+                          value={targetPriceInput}
+                          onChange={(e) => setTargetPriceInput(e.target.value)}
+                          className="w-full px-2.5 py-2 rounded-[6px] bg-[var(--card)] border border-[var(--border)] text-[var(--text)] text-xs font-mono-num min-h-[44px]"
+                        />
+                      </div>
                     </div>
                   </div>
 

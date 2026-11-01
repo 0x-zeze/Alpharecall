@@ -20,6 +20,7 @@ import { PredictionRecord, PredictionCategory, PredictionStatus } from "@/lib/ty
 import { AddPredictionSlideOver } from "./AddPredictionSlideOver";
 import { getWalrusBlobExplorerUrl } from "@/lib/explorer";
 import { isBacktestRecord } from "@/lib/dashboard-stats";
+import { CoinLogo } from "@/components/ui/CoinLogo";
 
 interface JournalViewProps {
   predictions: PredictionRecord[];
@@ -184,7 +185,15 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-[10px] text-[var(--muted)] font-mono-num">{pred.dateStr}</div>
-                    <div className="font-semibold text-sm text-[var(--text)] break-words">{pred.target}</div>
+                    <div className="font-semibold text-sm text-[var(--text)] break-words flex items-center gap-1.5 mt-0.5">
+                      {pred.sportType === "crypto" && (
+                        <CoinLogo
+                          symbol={pred.asset || (pred.target.includes("SUI") ? "SUI" : pred.target.includes("BTC") ? "BTC" : pred.target.includes("ETH") ? "ETH" : "")}
+                          size={16}
+                        />
+                      )}
+                      <span>{pred.target}</span>
+                    </div>
                     <div className="text-xs text-[var(--muted)] mt-0.5 break-words">{pred.pick}</div>
                   </div>
                   {pred.outcome === "ACCURATE" ? (
@@ -298,6 +307,12 @@ export function JournalView({ predictions, onAddPrediction, onRefresh }: Journal
                         {/* Market / Event */}
                         <td className="py-3 px-4 font-semibold text-[var(--text)] max-w-xs truncate">
                           <div className="flex items-center gap-1.5">
+                            {pred.sportType === "crypto" && (
+                              <CoinLogo
+                                symbol={pred.asset || (pred.target.includes("SUI") ? "SUI" : pred.target.includes("BTC") ? "BTC" : pred.target.includes("ETH") ? "ETH" : "")}
+                                size={16}
+                              />
+                            )}
                             <span className="truncate">{pred.target}</span>
                             {isHistoricalBacktest ? (
                               <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0">
