@@ -107,7 +107,7 @@ The 16 historical seed records in AlphaRecall are committed to Walrus Mainnet st
 | Hackathon Criterion | Project Evidence & File Reference | Current Operational Status |
 |---|---|---|
 | **Walrus Integration (30%)** | `lib/walrus.ts`, `lib/memory-codec.ts`, `seed-receipts.json` | 16 verified mainnet blobs active. Codec implements `ALPHARECALL_V1` with full backward compatibility. |
-| **Tatum Integration (30%)** | `lib/sui-grpc.ts`, `lib/tatum.ts`, `lib/resolver.ts` | Official Tatum gRPC client implemented with TLS and metadata authentication. Real-time price oracle settlement powered by Tatum Data API v3. Multi-tier fallback preserves 100% uptime with honest attribution. |
+| **Tatum Integration (30%)** | `lib/sui-grpc.ts`, `lib/tatum.ts`, `lib/resolver.ts` | Official Tatum gRPC client implemented with TLS and metadata authentication. Real-time price oracle settlement powered by Tatum Data API v3. Multi-tier fallback falls back through multiple sources and records which one answered with honest attribution. |
 | **Technical Quality & Rigor (30%)** | `scripts/run-tests.mjs`, `lib/dedupe.ts`, `lib/credibility.ts` | 60 comprehensive offline unit tests passing. Strict read-after-write verification, zero credential leakage, and typed Next.js App Router endpoints. |
 | **Creativity & Presentation (20%)** | `components/dashboard/`, `components/journal/`, Bento Grid UI | Modern data-first dashboard with reactive consensus pivot calculation and live telemetry feeds. |
 

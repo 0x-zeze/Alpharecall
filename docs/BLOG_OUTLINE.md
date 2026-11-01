@@ -57,7 +57,7 @@
 - Client isolation: clients cannot write outcomes, P&L, or deltas.
 - Fail-closed cron resolution via GitHub Actions.
 - Cryptographic delegate keys: public agent ID on Walrus, private keys strictly protected.
-- Offline test suite: 60 automated unit tests guaranteeing mathematical precision.
+- Offline test suite: 60 automated unit tests covering the scoring and resolution logic.
 
 ---
 
