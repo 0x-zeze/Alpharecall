@@ -2,7 +2,7 @@
 
 > **Decentralized Prediction & Forecaster Credibility Engine that Learns Over Time.**  
 > Built for the **Tatum x Walrus Hackathon (Track 1: Markets & Sports Prediction)**.  
-> Powered by **Walrus Memory on Mainnet** (`@mysten-incubation/memwal`) and **Tatum Data & RPC Gateway APIs**.
+> Powered by **Walrus Memory on Mainnet** (`@mysten-incubation/memwal`), **Tatum Data API**, and **Sui Network Checkpoints**.
 
 ---
 
@@ -21,7 +21,7 @@ Traditional prediction markets and sports tipping platforms suffer from an archi
 
 **AlphaRecall solves this by giving prediction engines permanent onchain memory.**
 
-By combining **Walrus Memory on Mainnet** with **Tatum Data & Sui RPC Gateways**, AlphaRecall tracks every forecast, anchors it to a Sui checkpoint, audits its outcome at maturity, and immutably recalibrates forecaster credibility weights across sessions.
+By combining **Walrus Memory on Mainnet** with the **Tatum Data API** (for real-time exchange rates) and **Sui Checkpoint Anchors** (via Tatum Sui Gateway when available, or public Sui GraphQL fallback when gateway returns 404), AlphaRecall tracks every forecast, anchors it to a Sui checkpoint, resolves its outcome at maturity, and immutably recalibrates forecaster credibility weights across sessions.
 
 ### The Autonomous AlphaRecall Loop
 
@@ -32,7 +32,7 @@ By combining **Walrus Memory on Mainnet** with **Tatum Data & Sui RPC Gateways**
 [6. Weighted Consensus Shift] ◄── [5. Dynamic Credibility Tuning] ◄── [4. Tatum Oracle Settlement]
 ```
 
-1. **Intake & Sui Anchor:** An analyst logs a forecast (Crypto, Soccer, or NBA). The system fetches the latest Sui Checkpoint sequence from the Tatum Sui RPC Gateway to cryptographically anchor creation time.
+1. **Intake & Sui Anchor:** An analyst logs a forecast (Crypto, Soccer, or NBA). The system fetches the latest Sui Checkpoint sequence to cryptographically anchor creation time. It queries the Tatum Sui Gateway first; if the Tatum gateway replies with HTTP 404 (due to Sui JSON-RPC deprecation), the system falls back to the public Sui GraphQL endpoint (`https://graphql.mainnet.sui.io/graphql`) and persists the checkpoint along with its explicit source attribution (`tatum-gateway` or `sui-graphql`).
 2. **Immutable Memory Commitment:** The forecast is encoded into a structured `ALPHARECALL_V1` JSON payload and saved to Walrus Mainnet storage nodes via `@mysten-incubation/memwal`.
 3. **Maturity & Resolution:** At the deadline, the resolver queries the Tatum Data API for real-time exchange rates (`/v3/tatum/rate/{symbol}?basePair=USD`).
 4. **Adaptive Credibility Tuning:** Outcome accuracy is determined (`ACCURATE` vs `FAILED`), generating an explicit score delta ($\Delta$). A pure mathematical function maps total delta to an analyst weight multiplier:
@@ -45,7 +45,7 @@ By combining **Walrus Memory on Mainnet** with **Tatum Data & Sui RPC Gateways**
 
 To ensure 100% honesty and data integrity:
 
-* **16 Historical Backtest Seeds (October 2024):** The initial baseline credibility matrix is seeded from real-world audited fixtures from October 2024 (e.g. *El Clasico Real Madrid 0 - 4 FC Barcelona*, *Arsenal 2 - 2 Liverpool*, *Sui $2.00 Breakout*). All 16 records have been cryptographically written to Walrus Mainnet and carry genuine onchain `blobId` receipts.
+* **16 Historical Backtest Seeds (October 2024):** The initial baseline credibility matrix is seeded from real-world historical fixtures from October 2024 (e.g. *El Clasico Real Madrid 0 - 4 FC Barcelona*, *Arsenal 2 - 2 Liverpool*, *Sui $2.00 Breakout*). All 16 records have been cryptographically written to Walrus Mainnet and carry genuine onchain `blobId` receipts.
 * **Live User Forecasts:** Any new prediction committed through the UI is saved with status `PENDING` and delta `0`. Crypto predictions require a strict future deadline (up to 30 days) and are settled at maturity via the Tatum Data API.
 
 ---
