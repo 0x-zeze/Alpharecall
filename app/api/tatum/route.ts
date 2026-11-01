@@ -24,6 +24,8 @@ export async function GET() {
         referenceGasPrice: suiStatus.referenceGasPrice,
         chainId: suiStatus.chainId,
         isTatumGateway: tatumStatus.ok,
+        source: suiStatus.source,
+        gatewayWarning: suiStatus.gatewayWarning || null,
       },
       timestamp: Date.now(),
     });

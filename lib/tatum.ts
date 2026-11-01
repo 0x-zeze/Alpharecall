@@ -1,4 +1,4 @@
-import type { TatumGatewayStatus, SuiChainStatus, SuiNodeStatus } from "./types";
+import type { TatumGatewayStatus, SuiChainStatus, SuiNodeStatus, SuiCheckpointSource } from "./types";
 
 /**
  * Fetch live Tatum API Gateway metadata (Plan, Credits, Latency, Version).
@@ -258,12 +258,17 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
       latencyMs,
       rpcUrl: "sui-mainnet.gateway.tatum.io",
       isTatumGateway: isTatumConfigured,
+      source: "tatum-gateway",
     };
   } catch (err: unknown) {
     clearTimeout(timeoutId);
     const msg = err instanceof Error ? err.message : "Sui RPC unreachable";
 
     // Fallback: If Tatum Gateway fails (e.g. HTTP 404), query official Sui Mainnet GraphQL
+    // Enforce 5s AbortController timeout and validate data shape & GraphQL errors[]
+    const gqlController = new AbortController();
+    const gqlTimeoutId = setTimeout(() => gqlController.abort(), 5000);
+
     try {
       const gqlRes = await fetch("https://graphql.mainnet.sui.io/graphql", {
         method: "POST",
@@ -281,29 +286,67 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
             chainIdentifier
           }`,
         }),
+        signal: gqlController.signal,
         cache: "no-store",
       });
 
       if (gqlRes.ok) {
         const gqlData = await gqlRes.json();
-        const cp = gqlData?.data?.checkpoint;
-        if (cp?.sequenceNumber != null) {
+
+        // 1. Handle error responses in GraphQL body (even on HTTP 200)
+        if (Array.isArray(gqlData?.errors) && gqlData.errors.length > 0) {
+          throw new Error("Sui GraphQL responded with errors");
+        }
+
+        const data = gqlData?.data;
+        const cp = data?.checkpoint;
+
+        // 2. Validate sequenceNumber and chainIdentifier exist and are valid
+        const hasValidSequence =
+          cp?.sequenceNumber != null &&
+          /^\d+$/.test(String(cp.sequenceNumber)) &&
+          Number(cp.sequenceNumber) > 0;
+        const hasValidChainId =
+          typeof data?.chainIdentifier === "string" && data.chainIdentifier.trim().length > 0;
+
+        if (hasValidSequence && hasValidChainId) {
+          const checkpoint = String(cp.sequenceNumber);
+          const checkpointDigest =
+            typeof cp.digest === "string" && cp.digest.trim().length > 0 ? cp.digest.trim() : null;
+          const epoch =
+            cp.epoch?.epochId != null && /^\d+$/.test(String(cp.epoch.epochId))
+              ? String(cp.epoch.epochId)
+              : null;
+
+          // Only append " MIST" if referenceGasPrice is strictly numeric
+          let referenceGasPrice: string | null = null;
+          if (
+            cp.epoch?.referenceGasPrice != null &&
+            /^\d+$/.test(String(cp.epoch.referenceGasPrice))
+          ) {
+            referenceGasPrice = `${cp.epoch.referenceGasPrice} MIST`;
+          }
+
           return {
             ok: true,
             status: "live",
-            checkpoint: String(cp.sequenceNumber),
-            checkpointDigest: cp.digest ? String(cp.digest) : null,
-            epoch: cp.epoch?.epochId ? String(cp.epoch.epochId) : null,
-            referenceGasPrice: cp.epoch?.referenceGasPrice ? `${cp.epoch.referenceGasPrice} MIST` : null,
-            chainId: gqlData?.data?.chainIdentifier ? String(gqlData.data.chainIdentifier) : null,
+            checkpoint,
+            checkpointDigest,
+            epoch,
+            referenceGasPrice,
+            chainId: data.chainIdentifier.trim(),
             latencyMs: Date.now() - startTime,
             rpcUrl: "graphql.mainnet.sui.io",
-            isTatumGateway: isTatumConfigured,
+            isTatumGateway: false,
+            source: "sui-graphql",
+            gatewayWarning: `Tatum gateway failed (${msg}); retrieved via Sui GraphQL fallback`,
           };
         }
       }
     } catch {
-      // GraphQL fallback failed, propagate original unavailable status
+      // GraphQL fallback failed, proceed to fail-closed state
+    } finally {
+      clearTimeout(gqlTimeoutId);
     }
 
     return {
@@ -317,6 +360,7 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
       latencyMs: null,
       rpcUrl: "sui-mainnet.gateway.tatum.io",
       isTatumGateway: isTatumConfigured,
+      source: null,
       error: `Sui RPC unavailable: ${msg}`,
     };
   }
@@ -330,6 +374,7 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
 export async function getLatestSuiCheckpointAnchor(): Promise<{
   checkpoint: string | null;
   digest: string | null;
+  source: SuiCheckpointSource | null;
 }> {
   try {
     const chainMetrics = await getSuiChainMetrics();
@@ -337,6 +382,7 @@ export async function getLatestSuiCheckpointAnchor(): Promise<{
       return {
         checkpoint: chainMetrics.checkpoint,
         digest: chainMetrics.checkpointDigest,
+        source: chainMetrics.source,
       };
     }
   } catch {
@@ -345,6 +391,7 @@ export async function getLatestSuiCheckpointAnchor(): Promise<{
   return {
     checkpoint: null,
     digest: null,
+    source: null,
   };
 }
 

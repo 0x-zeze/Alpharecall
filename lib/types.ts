@@ -37,6 +37,7 @@ export interface PredictionRecord {
   // BAGIAN 3: Optional Sui Anchor fields
   suiCheckpoint?: string | null;
   suiCheckpointDigest?: string | null;
+  suiCheckpointSource?: "tatum-gateway" | "sui-graphql" | null;
   oracleFallbackUsed?: boolean;
 }
 
@@ -81,6 +82,8 @@ export interface TatumGatewayStatus {
   error?: string | null;
 }
 
+export type SuiCheckpointSource = "tatum-gateway" | "sui-graphql";
+
 export interface SuiChainStatus {
   ok: boolean;
   status: "live" | "unavailable";
@@ -92,6 +95,8 @@ export interface SuiChainStatus {
   latencyMs: number | null;
   rpcUrl: string;
   isTatumGateway: boolean;
+  source: SuiCheckpointSource | null;
+  gatewayWarning?: string | null;
   error?: string | null;
 }
 
