@@ -77,8 +77,62 @@ export interface ResolutionResult {
 }
 
 /**
+ * Normalizes a numeric price string that may use periods or commas as decimals / thousands separators.
+ *
+ * Rules:
+ * 1. If string contains both comma and period (e.g. "77,890.50" or "77.890,50"):
+ *    - If the last separator is period (e.g. "77,890.50"): commas are thousands separators -> strip commas.
+ *    - If the last separator is comma (e.g. "77.890,50"): periods are thousands separators -> strip periods, replace comma with period.
+ * 2. If string contains ONLY comma(s) (no period):
+ *    - If it matches standard thousands grouping where 1-3 digits are followed by one or more
+ *      comma-separated 3-digit groups (e.g. "1,234", "77,890", "1,234,567"): commas are thousands separators -> strip commas -> 1234, 77890, 1234567.
+ *    - Otherwise, if a comma is between digits and followed by 1 to 8 digits (e.g. "0,9", "1,5", "1,25", "2,50", "0,00045"):
+ *      it is a decimal separator -> replace comma with period -> 0.9, 1.5, 1.25, 2.5.
+ * 3. Handles 'k' / 'K' suffix multiplier (e.g. "69k" -> 69000, "1.5k" -> 1500).
+ */
+export function normalizePriceString(raw: string): number | null {
+  if (!raw || typeof raw !== "string") return null;
+  const str = raw.trim().toLowerCase();
+
+  // Handle 'k' / 'K' suffix
+  const kMatch = str.match(/([\d.,]+)\s*k\b/);
+  if (kMatch) {
+    const base = normalizePriceString(kMatch[1]);
+    return base !== null && base > 0 ? base * 1000 : null;
+  }
+
+  // Extract clean number token with digits, commas, periods
+  const tokenMatch = str.match(/[\d.,]+/);
+  if (!tokenMatch) return null;
+  let token = tokenMatch[0];
+
+  const hasComma = token.includes(",");
+  const hasDot = token.includes(".");
+
+  if (hasComma && hasDot) {
+    const lastComma = token.lastIndexOf(",");
+    const lastDot = token.lastIndexOf(".");
+    if (lastDot > lastComma) {
+      token = token.replace(/,/g, "");
+    } else {
+      token = token.replace(/\./g, "").replace(",", ".");
+    }
+  } else if (hasComma) {
+    const thousandsPattern = /^\d{1,3}(,\d{3})+$/;
+    if (thousandsPattern.test(token)) {
+      token = token.replace(/,/g, "");
+    } else {
+      token = token.replace(",", ".");
+    }
+  }
+
+  const val = parseFloat(token);
+  return !isNaN(val) && val > 0 ? val : null;
+}
+
+/**
  * Parses crypto price target and direction from record or pick/content strings.
- * Example: "LONG SUI > $2.00", "BOUNCE > $1.85", "BTC TEST $69K", "RATIO < 0.0380"
+ * Example: "LONG SUI > $2.00", "BOUNCE > $1.85", "BTC TEST $69K", "SUI < $0,9"
  */
 export function parseCryptoTarget(
   targetStr: string,
@@ -95,20 +149,35 @@ export function parseCryptoTarget(
     symbol = "bitcoin";
   }
 
-  let targetPrice = 0;
   let direction: "above" | "below" = "above";
-
-  if (combined.includes("<") || combined.includes("under") || combined.includes("short")) {
+  if (combined.includes("<") || combined.includes("under") || combined.includes("short") || combined.includes("below")) {
     direction = "below";
   }
 
-  const kMatch = combined.match(/(\d+(?:\.\d+)?)\s*k/);
+  let targetPrice = 0;
+
+  // 1. Look for 'k' notation: e.g. "69k", "69.5k", "69,5k"
+  const kMatch = combined.match(/([\d.,]+)\s*k\b/);
   if (kMatch) {
-    targetPrice = parseFloat(kMatch[1]) * 1000;
-  } else {
-    const numMatch = combined.match(/(?:>|<|\$)\s*(\d+(?:\.\d+)?)/);
+    const parsedK = normalizePriceString(kMatch[0]);
+    if (parsedK && parsedK > 0) targetPrice = parsedK;
+  }
+
+  // 2. Look for explicit target prefixes: e.g. "> $1,25", "> 0,9", "< $0,9", "$77,890.50", "test $69k"
+  if (targetPrice <= 0) {
+    const explicitMatch = combined.match(/(?:>|<|\$|test|above|below|under)\s*([\d.,]+)/);
+    if (explicitMatch) {
+      const parsedExplicit = normalizePriceString(explicitMatch[1]);
+      if (parsedExplicit && parsedExplicit > 0) targetPrice = parsedExplicit;
+    }
+  }
+
+  // 3. Fallback: match any standalone number token in combined string
+  if (targetPrice <= 0) {
+    const numMatch = combined.match(/\b\d+(?:[.,]\d+)?\b/);
     if (numMatch) {
-      targetPrice = parseFloat(numMatch[1]);
+      const parsedNum = normalizePriceString(numMatch[0]);
+      if (parsedNum && parsedNum > 0) targetPrice = parsedNum;
     }
   }
 

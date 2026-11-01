@@ -45,29 +45,52 @@ export function AddPredictionSlideOver({
     new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 16)
   );
   const [direction, setDirection] = useState<"above" | "below">("above");
-  const [targetPrice, setTargetPrice] = useState<number>(2.0);
+  const [targetPriceInput, setTargetPriceInput] = useState("2.0");
   const [asset, setAsset] = useState("SUI");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
-    if (!target.trim() || !pick.trim()) {
-      setFormError("Target and Pick are required.");
-      return;
-    }
+    let finalTarget = target.trim();
+    let finalPick = pick.trim();
+    let parsedTargetPrice: number | undefined = undefined;
 
-    if (sportType === "crypto" && !deadline) {
-      setFormError("Crypto forecasts require a settlement deadline.");
-      return;
+    if (sportType === "crypto") {
+      if (!deadline) {
+        setFormError("Crypto forecasts require a settlement deadline.");
+        return;
+      }
+
+      if (!targetPriceInput.trim()) {
+        setFormError("Target price is required.");
+        return;
+      }
+
+      const normalizedPriceStr = targetPriceInput.trim().replace(",", ".");
+      parsedTargetPrice = parseFloat(normalizedPriceStr);
+
+      if (isNaN(parsedTargetPrice) || parsedTargetPrice <= 0) {
+        setFormError("Target price must be a valid number greater than 0.");
+        return;
+      }
+
+      // Automatically generate target and pick text from structured fields to prevent contradictions
+      finalTarget = `${asset}/USD`;
+      finalPick = `${asset} ${direction === "above" ? ">" : "<"} $${normalizedPriceStr}`;
+    } else {
+      if (!finalTarget || !finalPick) {
+        setFormError("Target and Pick are required.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
     try {
       const deadlineIso = sportType === "crypto" && deadline ? new Date(deadline).toISOString() : undefined;
       const res = await onSubmit({
-        target: target.trim(),
-        pick: pick.trim(),
+        target: finalTarget,
+        pick: finalPick,
         sportType,
         odds: odds.trim(),
         stake,
@@ -76,7 +99,7 @@ export function AddPredictionSlideOver({
         reasoning: reasoning.trim(),
         deadline: deadlineIso,
         direction: sportType === "crypto" ? direction : undefined,
-        targetPrice: sportType === "crypto" ? targetPrice : undefined,
+        targetPrice: sportType === "crypto" ? parsedTargetPrice : undefined,
         asset: sportType === "crypto" ? asset : undefined,
       });
 
@@ -88,6 +111,7 @@ export function AddPredictionSlideOver({
       // Reset form
       setTarget("");
       setPick("");
+      setTargetPriceInput("2.0");
       setReasoning("");
       setFormError(null);
       onClose();
@@ -210,13 +234,15 @@ export function AddPredictionSlideOver({
                     </div>
 
                     <div>
-                      <label className="block text-[var(--muted)] mb-1 uppercase text-[9px]">Target ($)</label>
+                      <label className="block text-[var(--muted)] mb-1 uppercase text-[9px]">Target Price ($)</label>
                       <input
-                        type="number"
-                        step="any"
-                        value={targetPrice}
-                        onChange={(e) => setTargetPrice(parseFloat(e.target.value) || 0)}
-                        className="w-full px-2 py-1.5 rounded-[6px] bg-[var(--card)] border border-[var(--border)] text-[var(--text)]"
+                        type="text"
+                        inputMode="decimal"
+                        required
+                        placeholder="e.g. 1.85 or 0,9"
+                        value={targetPriceInput}
+                        onChange={(e) => setTargetPriceInput(e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-[6px] bg-[var(--card)] border border-[var(--border)] text-[var(--text)] text-xs font-mono-num"
                       />
                     </div>
                   </div>
@@ -236,38 +262,51 @@ export function AddPredictionSlideOver({
                       Must be strictly in the future (within 30 days). Evaluated via Tatum at deadline.
                     </span>
                   </div>
+
+                  <div className="p-2.5 rounded-[8px] bg-[var(--card)] border border-[var(--border)] text-[11px] font-mono-num space-y-0.5">
+                    <div className="text-[10px] text-[var(--muted)] uppercase font-semibold">Auto-Generated Target & Pick</div>
+                    <div className="text-[var(--text)] text-[11px]">
+                      Target: <span className="font-semibold text-[var(--text)]">{asset}/USD</span>
+                    </div>
+                    <div className="text-[var(--accent)] font-semibold text-[11px]">
+                      Pick: {asset} {direction === "above" ? ">" : "<"} ${targetPriceInput.trim().replace(",", ".") || "..."}
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Target */}
-              <div>
-                <label className="block text-[var(--muted)] mb-1.5 uppercase text-[10px]">
-                  Target Fixture or Asset
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder={sportType === "crypto" ? "e.g. SUI/USDT Spot Breakout" : "e.g. UCL Real Madrid vs Milan"}
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-[8px] bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)]/50 focus:border-[var(--accent)] focus:outline-none"
-                />
-              </div>
+              {/* Target & Pick (Manual entry for Soccer / NBA) */}
+              {sportType !== "crypto" && (
+                <>
+                  <div>
+                    <label className="block text-[var(--muted)] mb-1.5 uppercase text-[10px]">
+                      Target Fixture or Event
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. UCL Real Madrid vs AC Milan"
+                      value={target}
+                      onChange={(e) => setTarget(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-[8px] bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)]/50 focus:border-[var(--accent)] focus:outline-none"
+                    />
+                  </div>
 
-              {/* Pick / Call */}
-              <div>
-                <label className="block text-[var(--muted)] mb-1.5 uppercase text-[10px]">
-                  Specific Forecast / Pick
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder={sportType === "crypto" ? "e.g. SUI > $2.00" : "e.g. OVER 2.5 Total Goals"}
-                  value={pick}
-                  onChange={(e) => setPick(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-[8px] bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)]/50 focus:border-[var(--accent)] focus:outline-none"
-                />
-              </div>
+                  <div>
+                    <label className="block text-[var(--muted)] mb-1.5 uppercase text-[10px]">
+                      Specific Forecast / Pick
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. RMA Win & Over 2.5"
+                      value={pick}
+                      onChange={(e) => setPick(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-[8px] bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--muted)]/50 focus:border-[var(--accent)] focus:outline-none"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Odds & Stake */}
               <div className="grid grid-cols-2 gap-3">

@@ -18,6 +18,7 @@ import {
   resolveDuePredictions,
   calculateOutcomeDelta,
   parseCryptoTarget,
+  normalizePriceString,
   RESOLVER_GRACE_WINDOW_MS,
 } from "../lib/resolver.ts";
 import {
@@ -516,6 +517,59 @@ async function main() {
       assert.equal(calculateOutcomeDelta("FAILED", 3), -5);
     });
 
+    await it("should parse comma decimal numbers and thousands separators correctly", () => {
+      // Testing ambiguous cases per requirement
+      assert.equal(normalizePriceString("1,234"), 1234);
+      assert.equal(normalizePriceString("0,9"), 0.9);
+      assert.equal(normalizePriceString("1,5"), 1.5);
+      assert.equal(normalizePriceString("77,890.50"), 77890.5);
+      assert.equal(normalizePriceString("2,50"), 2.5);
+
+      // Additional standard cases
+      assert.equal(normalizePriceString("$1,25"), 1.25);
+      assert.equal(normalizePriceString("77,890"), 77890);
+      assert.equal(normalizePriceString("1,234,567"), 1234567);
+      assert.equal(normalizePriceString("69k"), 69000);
+      assert.equal(normalizePriceString("69.5k"), 69500);
+      assert.equal(normalizePriceString("69,5k"), 69500);
+
+      // Text fallback parsing with comma decimal
+      const fallbackParsed = parseCryptoTarget("SUI Spot", "SUI < $0,9");
+      assert.notEqual(fallbackParsed, null);
+      assert.equal(fallbackParsed?.symbol, "sui");
+      assert.equal(fallbackParsed?.direction, "below");
+      assert.equal(fallbackParsed?.targetPrice, 0.9);
+    });
+
+    await it("resolver uses structured targetPrice first over text fallback", async () => {
+      process.env.TATUM_API_KEY = "test_key_123";
+      globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => ({ value: "2.10", basePair: "USD" }),
+      });
+
+      const baseNow = Date.now();
+      // Text says $0.9 but structured targetPrice is 2.5
+      const structuredPred = {
+        id: "pred-struct-priority",
+        sportType: "crypto",
+        target: "SUI/USD",
+        pick: "SUI > $0.9", // text has 0.9
+        outcome: "PENDING",
+        analyst: "@StructuredSharp",
+        stake: 250,
+        confidence: 4,
+        deadline: new Date(baseNow - 1000).toISOString(),
+        direction: "above",
+        targetPrice: 2.5, // structured priority
+      };
+
+      const res = await resolveCryptoPrediction(structuredPred, baseNow);
+      assert.equal(res.status, "resolved");
+      // Price is 2.10, structured targetPrice is 2.5 -> FAILED
+      assert.equal(res.outcome, "FAILED");
+    });
+
     await it("should resolve due candidates idempotently and skip already-resolved records", async () => {
       process.env.TATUM_API_KEY = "test_key_123";
       globalThis.fetch = async (url) => {
@@ -795,6 +849,30 @@ async function main() {
       assert.equal(res.status, 400);
       assert.equal(json.success, false);
       assert.equal(json.error?.includes("deadline"), true);
+    });
+
+    await it("should reject crypto forecast without valid targetPrice > 0 with HTTP 400", async () => {
+      const futureDeadline = new Date(Date.now() + 86400000).toISOString();
+      const req = new Request("http://localhost:3000/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "SUI Missing Target Price",
+          target: "SUI/USD",
+          pick: "SUI > $0",
+          analyst: "@CryptoTrader",
+          sportType: "crypto",
+          deadline: futureDeadline,
+          targetPrice: 0, // Invalid targetPrice 0
+        }),
+      });
+
+      const res = await postMemory(req);
+      const json = await res.json();
+
+      assert.equal(res.status, 400);
+      assert.equal(json.success, false);
+      assert.equal(json.error?.includes("targetPrice"), true);
     });
 
     await it("should reject invalid analyst handles that fail regex @[A-Za-z0-9_]{3,30}", async () => {

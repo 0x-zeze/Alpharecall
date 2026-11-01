@@ -161,6 +161,7 @@ export async function POST(req: Request) {
 
     // 7. Validate Crypto Deadline Requirements (Bagian 2)
     let parsedDeadlineIso: string | undefined = undefined;
+    let validatedTargetPrice: number | undefined = undefined;
     if (categoryVal === "crypto") {
       if (!deadline || typeof deadline !== "string") {
         return NextResponse.json(
@@ -205,6 +206,25 @@ export async function POST(req: Request) {
       }
 
       parsedDeadlineIso = new Date(deadlineMs).toISOString();
+
+      // Validate targetPrice > 0 for crypto forecasts
+      const rawTp =
+        typeof targetPrice === "number"
+          ? targetPrice
+          : typeof targetPrice === "string"
+          ? parseFloat(targetPrice.trim().replace(",", "."))
+          : NaN;
+
+      if (isNaN(rawTp) || rawTp <= 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Crypto forecast predictions require a valid targetPrice greater than 0.",
+          },
+          { status: 400 }
+        );
+      }
+      validatedTargetPrice = rawTp;
     } else if (deadline && typeof deadline === "string") {
       const dMs = Date.parse(deadline);
       if (!isNaN(dMs)) parsedDeadlineIso = new Date(dMs).toISOString();
@@ -215,6 +235,9 @@ export async function POST(req: Request) {
     const sanitizedOutcome = "PENDING";
     const sanitizedDelta = 0;
     const sanitizedPnl = 0;
+
+    const assetStr = typeof asset === "string" && asset.trim().length > 0 ? asset.trim().slice(0, 20) : "SUI";
+    const finalDirection: "above" | "below" = direction === "below" ? "below" : "above";
 
     // 9. Anchor Checkpoint from Tatum / Sui Gateway (Bagian 3)
     const anchor = await getLatestSuiCheckpointAnchor();
@@ -238,9 +261,9 @@ export async function POST(req: Request) {
       stake: stakeVal,
       confidence: confVal,
       deadline: parsedDeadlineIso,
-      direction: direction === "above" || direction === "below" ? direction : undefined,
-      targetPrice: typeof targetPrice === "number" && !isNaN(targetPrice) ? targetPrice : undefined,
-      asset: typeof asset === "string" ? asset.trim().slice(0, 20) : undefined,
+      direction: categoryVal === "crypto" ? finalDirection : (direction === "above" || direction === "below" ? direction : undefined),
+      targetPrice: categoryVal === "crypto" ? validatedTargetPrice : (typeof targetPrice === "number" && !isNaN(targetPrice) ? targetPrice : undefined),
+      asset: categoryVal === "crypto" ? assetStr : (typeof asset === "string" ? asset.trim().slice(0, 20) : undefined),
       suiCheckpoint: anchor.checkpoint,
       suiCheckpointDigest: anchor.digest,
       suiCheckpointSource: anchor.source,
