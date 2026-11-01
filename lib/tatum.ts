@@ -1,6 +1,14 @@
 import type { TatumGatewayStatus, SuiChainStatus, SuiNodeStatus, SuiCheckpointSource } from "./types";
 import { getSuiChainViaTatumGrpc } from "./sui-grpc";
 
+function sanitizeError(msg: string, apiKey?: string): string {
+  let cleaned = msg;
+  if (apiKey && apiKey.trim().length > 0) {
+    cleaned = cleaned.split(apiKey).join("[REDACTED]");
+  }
+  return cleaned.replace(/(x-api-key\s*[:=]\s*)["']?[^"'\s,]+["']?/gi, "$1[REDACTED]");
+}
+
 /**
  * Fetch live Tatum API Gateway metadata (Plan, Credits, Latency, Version).
  * Strictly authentic telemetry from https://api.tatum.io/v3/tatum/version.
@@ -87,6 +95,9 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
   const tatumApiKey = process.env.TATUM_API_KEY;
   const startTime = Date.now();
   const warnings: string[] = [];
+  const addWarning = (text: string) => {
+    warnings.push(sanitizeError(text, tatumApiKey));
+  };
 
   const isTatumConfigured = Boolean(
     tatumApiKey &&
@@ -116,11 +127,11 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
       };
     }
     if (grpcRes.error) {
-      warnings.push(`Tatum gRPC failed (${grpcRes.error})`);
+      addWarning(`Tatum gRPC failed (${grpcRes.error})`);
     }
   } catch (err: unknown) {
     const errText = err instanceof Error ? err.message : String(err);
-    warnings.push(`Tatum gRPC failed (${errText})`);
+    addWarning(`Tatum gRPC failed (${errText})`);
   }
 
   // --------------------------------------------------------------------------
@@ -293,7 +304,7 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
   } catch (err: unknown) {
     clearTimeout(jsonRpcTimeoutId);
     const msg = err instanceof Error ? err.message : "Sui JSON-RPC unreachable";
-    warnings.push(`Tatum gateway failed (${msg})`);
+    addWarning(`Tatum gateway failed (${msg})`);
   }
 
   // --------------------------------------------------------------------------
@@ -369,13 +380,16 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
           rpcUrl: "graphql.mainnet.sui.io",
           isTatumGateway: false,
           source: "sui-graphql",
-          gatewayWarning: `${warnings.join("; ")}; retrieved via Sui GraphQL fallback`,
+          gatewayWarning: sanitizeError(
+            `${warnings.join("; ")}; retrieved via Sui GraphQL fallback`,
+            tatumApiKey
+          ),
         };
       }
     }
   } catch (err: unknown) {
     const gqlMsg = err instanceof Error ? err.message : "Sui GraphQL unreachable";
-    warnings.push(`Sui GraphQL failed (${gqlMsg})`);
+    addWarning(`Sui GraphQL failed (${gqlMsg})`);
   } finally {
     clearTimeout(gqlTimeoutId);
   }
@@ -395,7 +409,7 @@ export async function getSuiChainMetrics(): Promise<SuiChainStatus> {
     rpcUrl: "sui-mainnet-grpc.gateway.tatum.io",
     isTatumGateway: false,
     source: null,
-    error: `All Sui RPC sources failed: ${warnings.join("; ")}`,
+    error: sanitizeError(`All Sui RPC sources failed: ${warnings.join("; ")}`, tatumApiKey),
   };
 }
 

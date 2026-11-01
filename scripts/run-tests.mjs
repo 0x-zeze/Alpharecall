@@ -29,6 +29,8 @@ import {
 import { dedupePredictions } from "../lib/dedupe.ts";
 import { DEMO_PREDICTIONS } from "../lib/demo-data.ts";
 import { setCustomSaveMemory } from "../lib/walrus.ts";
+import * as grpc from "@grpc/grpc-js";
+import { getSuiLedgerPackageDefinition } from "../lib/sui-grpc.ts";
 import {
   SIMULATED_STARTING_BANKROLL,
   activeRisk,
@@ -147,6 +149,21 @@ async function main() {
       const record = payloadToPredictionRecord(decoded, "blob-99");
       assert.equal(record.suiCheckpoint, "340000000");
       assert.equal(record.suiCheckpointSource, null);
+    });
+
+    await it("memory string with suiCheckpointSource 'tatum-grpc' decodes properly", () => {
+      const grpcRawMemory =
+        'ALPHARECALL_V1 {"version":"1.0","type":"resolution","predictionId":"rec-grpc-01","analyst":"@OptaTactics","category":"crypto","title":"Crypto Match","target":"SUI/USD","pick":"SUI > $2.00","odds":"-110","stake":300,"pnl":0,"outcome":"PENDING","delta":0,"confidence":4,"resolvedAt":"2026-11-01T12:00:00.000Z","suiCheckpoint":"340555666","suiCheckpointDigest":"0xgrpcDigest","suiCheckpointSource":"tatum-grpc"}';
+
+      const decoded = decodeMemory(grpcRawMemory);
+      assert.notEqual(decoded, null);
+      assert.equal(decoded?.predictionId, "rec-grpc-01");
+      assert.equal(decoded?.suiCheckpoint, "340555666");
+      assert.equal(decoded?.suiCheckpointDigest, "0xgrpcDigest");
+      assert.equal(decoded?.suiCheckpointSource, "tatum-grpc");
+
+      const record = payloadToPredictionRecord(decoded, "blob-grpc-01");
+      assert.equal(record.suiCheckpointSource, "tatum-grpc");
     });
 
     await it("should reject corrupted, missing, or un-prefixed inputs", () => {
@@ -650,7 +667,193 @@ async function main() {
       assert.equal(status.version, "v3.18.3");
     });
 
+    function startMockGrpcServer(handlers = {}) {
+      return new Promise((resolve, reject) => {
+        const pkg = getSuiLedgerPackageDefinition();
+        const proto = grpc.loadPackageDefinition(pkg);
+        const server = new grpc.Server();
+
+        server.addService(proto.sui.rpc.v2.LedgerService.service, {
+          GetServiceInfo:
+            handlers.getServiceInfo ||
+            ((call, callback) => {
+              callback(null, {});
+            }),
+          GetCheckpoint:
+            handlers.getCheckpoint ||
+            ((call, callback) => {
+              callback(null, {});
+            }),
+        });
+
+        server.bindAsync("127.0.0.1:0", grpc.ServerCredentials.createInsecure(), (err, port) => {
+          if (err) reject(err);
+          else resolve({ server, port, endpoint: `127.0.0.1:${port}` });
+        });
+      });
+    }
+
+    await it("Tatum gRPC success -> source 'tatum-grpc', isTatumGateway true, numbers parsed correctly", async () => {
+      const mockServer = await startMockGrpcServer({
+        getServiceInfo: (call, callback) => {
+          const key = call.metadata.get("x-api-key")[0];
+          if (key !== "test_grpc_api_key_123") {
+            return callback({ code: grpc.status.UNAUTHENTICATED, details: "Invalid key" });
+          }
+          callback(null, {
+            chainId: "4btiuiMPvEENsttpZC7CZ53DruC3MAgfznDbASZ7DR6S",
+            chain: "mainnet",
+            epoch: "1299",
+            checkpointHeight: "340555666",
+            timestamp: { seconds: "1730000000", nanos: 0 },
+          });
+        },
+        getCheckpoint: (call, callback) => {
+          callback(null, {
+            checkpoint: {
+              sequenceNumber: "340555666",
+              digest: "0xMockDigestMainnet",
+            },
+          });
+        },
+      });
+
+      process.env.TATUM_SUI_GRPC_ENDPOINT = mockServer.endpoint;
+      process.env.TATUM_API_KEY = "test_grpc_api_key_123";
+
+      const chain = await getSuiChainMetrics();
+      assert.equal(chain.ok, true);
+      assert.equal(chain.status, "live");
+      assert.equal(chain.source, "tatum-grpc");
+      assert.equal(chain.isTatumGateway, true);
+      assert.equal(chain.checkpoint, "340555666");
+      assert.equal(chain.checkpointDigest, "0xMockDigestMainnet");
+      assert.equal(chain.epoch, "1299");
+      assert.equal(chain.chainId, "4btiuiMPvEENsttpZC7CZ53DruC3MAgfznDbASZ7DR6S");
+      assert.equal(chain.referenceGasPrice, null); // Strictly null in gRPC
+      assert.equal(chain.gatewayWarning, null);
+
+      const anchor = await getLatestSuiCheckpointAnchor();
+      assert.equal(anchor.checkpoint, "340555666");
+      assert.equal(anchor.digest, "0xMockDigestMainnet");
+      assert.equal(anchor.source, "tatum-grpc");
+
+      mockServer.server.forceShutdown();
+    });
+
+    await it("Tatum gRPC unauthenticated (missing/invalid key) -> fallback to next source and gatewayWarning recorded", async () => {
+      const mockServer = await startMockGrpcServer({
+        getServiceInfo: (call, callback) => {
+          callback({ code: grpc.status.UNAUTHENTICATED, details: "Invalid API key" });
+        },
+      });
+
+      process.env.TATUM_SUI_GRPC_ENDPOINT = mockServer.endpoint;
+      process.env.TATUM_API_KEY = "wrong_or_missing_key";
+
+      // Mock JSON-RPC to 404 and GraphQL to success
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("gateway.tatum.io")) {
+          return { ok: false, status: 404, text: async () => '{"statusCode": 404, "message": "Not Found"}' };
+        }
+        if (typeof url === "string" && url.includes("graphql.mainnet.sui.io")) {
+          return {
+            ok: true,
+            json: async () => ({
+              data: {
+                checkpoint: {
+                  sequenceNumber: 340999000,
+                  digest: "0xFallbackDigest",
+                  epoch: { epochId: 1300, referenceGasPrice: "100" },
+                },
+                chainIdentifier: "chain_sui_mainnet",
+              },
+            }),
+          };
+        }
+        return { ok: false, status: 500 };
+      };
+
+      const chain = await getSuiChainMetrics();
+      assert.equal(chain.ok, true);
+      assert.equal(chain.source, "sui-graphql");
+      assert.equal(chain.isTatumGateway, false);
+      assert.equal(chain.checkpoint, "340999000");
+      assert.ok(chain.gatewayWarning?.includes("Tatum gRPC auth failed"));
+
+      mockServer.server.forceShutdown();
+    });
+
+    await it("Tatum gRPC server unreachable / timeout -> doesn't hang, gracefully falls back", async () => {
+      // Point to an inactive port that immediately closes
+      process.env.TATUM_SUI_GRPC_ENDPOINT = "127.0.0.1:59997";
+      process.env.TATUM_API_KEY = "test_key_123";
+
+      globalThis.fetch = async (url) => {
+        if (typeof url === "string" && url.includes("gateway.tatum.io")) {
+          return { ok: false, status: 404, text: async () => "Not Found" };
+        }
+        if (typeof url === "string" && url.includes("graphql.mainnet.sui.io")) {
+          return {
+            ok: true,
+            json: async () => ({
+              data: {
+                checkpoint: {
+                  sequenceNumber: 340888111,
+                  digest: "0xUnreachableDigest",
+                  epoch: { epochId: 1300 },
+                },
+                chainIdentifier: "chain_sui_mainnet",
+              },
+            }),
+          };
+        }
+        return { ok: false, status: 500 };
+      };
+
+      const chain = await getSuiChainMetrics();
+      assert.equal(chain.ok, true);
+      assert.equal(chain.source, "sui-graphql");
+      assert.equal(chain.isTatumGateway, false);
+      assert.equal(chain.checkpoint, "340888111");
+      assert.ok(chain.gatewayWarning?.includes("Tatum gRPC unreachable"));
+    });
+
+    await it("Tatum gRPC GetCheckpoint fails but GetServiceInfo succeeds -> checkpoint preserved with digest null", async () => {
+      const mockServer = await startMockGrpcServer({
+        getServiceInfo: (call, callback) => {
+          callback(null, {
+            chainId: "chain_sui_mainnet",
+            chain: "mainnet",
+            epoch: "1299",
+            checkpointHeight: "340777888",
+          });
+        },
+        getCheckpoint: (call, callback) => {
+          callback({ code: grpc.status.NOT_FOUND, details: "Pruned historical checkpoint" });
+        },
+      });
+
+      process.env.TATUM_SUI_GRPC_ENDPOINT = mockServer.endpoint;
+      process.env.TATUM_API_KEY = "test_key_123";
+
+      const chain = await getSuiChainMetrics();
+      assert.equal(chain.ok, true);
+      assert.equal(chain.source, "tatum-grpc");
+      assert.equal(chain.isTatumGateway, true);
+      assert.equal(chain.checkpoint, "340777888");
+      assert.equal(chain.checkpointDigest, null); // Strictly null, never fabricated
+
+      const anchor = await getLatestSuiCheckpointAnchor();
+      assert.equal(anchor.checkpoint, "340777888");
+      assert.equal(anchor.digest, null);
+      assert.equal(anchor.source, "tatum-grpc");
+
+      mockServer.server.forceShutdown();
+    });
+
     await it("gateway success -> source 'tatum-gateway', isTatumGateway true", async () => {
+      process.env.TATUM_SUI_GRPC_ENDPOINT = "127.0.0.1:59997"; // Force gRPC to failover to JSON-RPC
       globalThis.fetch = async (url, opts) => {
         const bodyStr = opts?.body ? String(opts.body) : "";
         if (typeof url === "string" && url.includes("sui-mainnet.gateway.tatum.io")) {
@@ -691,6 +894,7 @@ async function main() {
     });
 
     await it("gateway 404 + GraphQL success -> source 'sui-graphql', isTatumGateway false", async () => {
+      process.env.TATUM_SUI_GRPC_ENDPOINT = "127.0.0.1:59997"; // Force gRPC to failover
       globalThis.fetch = async (url) => {
         if (typeof url === "string" && url.includes("gateway.tatum.io")) {
           return {
@@ -738,7 +942,8 @@ async function main() {
       assert.equal(anchor.source, "sui-graphql");
     });
 
-    await it("both fail -> ok:false, source null, anchor null", async () => {
+    await it("all sources fail -> ok:false, source null, anchor null", async () => {
+      process.env.TATUM_SUI_GRPC_ENDPOINT = "127.0.0.1:59997";
       globalThis.fetch = async () => ({
         ok: false,
         status: 500,
@@ -757,7 +962,27 @@ async function main() {
       assert.equal(anchor.source, null);
     });
 
+    await it("API key is never leaked in any error string or gatewayWarning", async () => {
+      const SECRET_KEY = "SUPER_SECRET_KEY_EXPOSURE_TEST_999";
+      process.env.TATUM_API_KEY = SECRET_KEY;
+      process.env.TATUM_SUI_GRPC_ENDPOINT = "127.0.0.1:59997";
+
+      globalThis.fetch = async () => ({
+        ok: false,
+        status: 500,
+        text: async () => `Error mentioning ${SECRET_KEY} directly`,
+      });
+
+      const chain = await getSuiChainMetrics();
+      assert.equal(chain.ok, false);
+      assert.equal(chain.error?.includes(SECRET_KEY), false);
+      if (chain.gatewayWarning) {
+        assert.equal(chain.gatewayWarning.includes(SECRET_KEY), false);
+      }
+    });
+
     await it("GraphQL returns errors[] -> treated as failure", async () => {
+      process.env.TATUM_SUI_GRPC_ENDPOINT = "127.0.0.1:59997";
       globalThis.fetch = async (url) => {
         if (typeof url === "string" && url.includes("gateway.tatum.io")) {
           return { ok: false, status: 404, text: async () => "Not Found" };
@@ -781,6 +1006,7 @@ async function main() {
     });
 
     await it("GraphQL timeout -> fails gracefully without hanging", async () => {
+      process.env.TATUM_SUI_GRPC_ENDPOINT = "127.0.0.1:59997";
       globalThis.fetch = async (url, opts) => {
         if (typeof url === "string" && url.includes("gateway.tatum.io")) {
           return { ok: false, status: 404, text: async () => "Not Found" };
